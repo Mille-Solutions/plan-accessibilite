@@ -48,6 +48,27 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
 
+// Garde les info-bulles dans la carte (elles débordaient de l'écran près des bords sur mobile)
+function keepTooltipInside(tooltip) {
+  const el = tooltip.getElement();
+  if (!el) return;
+  el.style.marginLeft = '';
+  el.classList.remove('shifted');
+  const box = map.getContainer().getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  let dx = 0;
+  if (r.left < box.left + 8) dx = box.left + 8 - r.left;
+  else if (r.right > box.right - 8) dx = box.right - 8 - r.right;
+  if (dx) {
+    el.style.marginLeft = `${dx}px`;
+    el.classList.add('shifted');
+  }
+}
+map.on('tooltipopen', (e) => requestAnimationFrame(() => keepTooltipInside(e.tooltip)));
+map.on('zoomend moveend', () => {
+  map.eachLayer((layer) => { const tt = layer.getTooltip?.(); if (tt && tt.isOpen()) keepTooltipInside(tt); });
+});
+
 const routeLayer = L.layerGroup().addTo(map);
 const markerLayer = L.layerGroup().addTo(map);
 
@@ -370,9 +391,9 @@ function drawRoute(res, walk) {
 }
 
 function stepText(s) {
-  if (s.type === 'entrance') return `${t('stationEntrance')}${s.name ? ` « ${s.name} »` : ''}`;
+  if (s.type === 'entrance') return `${t('stationEntrance')}${s.name ? ` «\u00a0${s.name}\u00a0»` : ''}`;
   if (s.type === 'elevator') {
-    const name = s.name ? ` « ${s.name} »` : '';
+    const name = s.name ? ` «\u00a0${s.name}\u00a0»` : '';
     return `${t('takeElevator')}${name}`;
   }
   const isPath = ['footway', 'pedestrian', 'path', 'corridor', 'platform', 'crossing'].includes(s.highway);

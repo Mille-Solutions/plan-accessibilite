@@ -261,3 +261,13 @@ body.picking .map { cursor: crosshair; }
 .map.has-route .leaflet-marker-pane .poi-icon:not(.route-stop .poi-icon),
 .map.has-route .leaflet-marker-pane .poi-cluster { opacity: .45; }
 .map.has-route .leaflet-overlay-pane path.leaflet-interactive:not(.route-line) { opacity: .35; }
+
+/* Info-bulles : retour à la ligne au lieu de déborder de l'écran sur mobile */
+.leaflet-tooltip {
+  white-space: normal;
+  width: max-content;
+  max-width: min(240px, 65vw);
+  font-size: 14px;
+  line-height: 1.3;
+}
+.leaflet-tooltip.shifted::before { display: none; } /* la flèche ne pointe plus sur le repère une fois décalée */
