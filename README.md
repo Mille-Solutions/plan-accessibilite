@@ -18,11 +18,13 @@ puis ouvrir <http://localhost:8765>.
 ## Ce que fait la v1
 
 - **Carte Leaflet** sur fond OpenStreetMap, interface en français et en anglais.
-- **Couches activables** : ascenseurs, escaliers mécaniques, rampes et pentes, escaliers (à éviter),
+- **Couches activables** : ascenseurs, entrées de la gare, escaliers mécaniques, rampes et pentes, escaliers (à éviter),
   toilettes PMR, stationnement PMR, trottoirs abaissés.
 - **Fiche au clic** : nom, horaires (avec ouvert/fermé maintenant), accès fauteuil, niveaux, photo si
   renseignée dans OSM, lien pour corriger la donnée sur OpenStreetMap. Un ascenseur en pointillés
   n'est pas relié au réseau piéton dans OSM et n'est donc pas utilisé par le calcul d'itinéraire.
+  Une entrée de gare en pointillés n'est accessible que par des escaliers d'après OSM
+  (c'est le cas de « Place Sainte-Dévote »).
 - **Itinéraire sans escaliers**, calculé dans le navigateur (Dijkstra sur le réseau piéton OSM) :
   - exclut escaliers, escalators, passages `wheelchair=no` et obstacles ;
   - exclut les pentes > 12 % et pénalise les pentes de 6 à 12 % (quand elles sont renseignées) ;
@@ -30,7 +32,8 @@ puis ouvrir <http://localhost:8765>.
   - tient compte des horaires d'ouverture des ascenseurs à l'heure de départ choisie ;
   - affiche distance, durée estimée, ascenseurs empruntés, points d'attention et feuille de route ;
   - peut afficher en comparaison le trajet piéton le plus court (avec escaliers).
-- **Trajets de référence** (cas de test) : Bd de Belgique par les ascenseurs de la gare, Adagio Beausoleil,
+- **Trajets de référence** (cas de test) : Bd de Belgique par la gare (ascenseur Sainte-Dévote / Belgique,
+  galerie Sainte-Dévote, sortie Port Hercule), Adagio Beausoleil,
   Odalys Beausoleil, Beausoleil près de la Tour Odéon → Yacht Club.
 - **Mon trajet** : départ / arrivée posés sur la carte (ou « Ma position »), marqueurs déplaçables.
 - **OpenRouteService (optionnel)** : avec une clé API gratuite, comparaison avec leur profil « wheelchair ».
@@ -52,7 +55,9 @@ Reporté à plus tard (cf. plan) : signalement d'ascenseur en panne, PWA hors li
 ```
 
 `via` est facultatif : un point de passage est soit des coordonnées `{lat, lon}`, soit un ascenseur OSM
-`{elevator: <id du nœud>}` (l'id figure dans le lien OSM de la fiche). Plus simple : tracer le trajet
+`{elevator: <id du nœud>}`, soit une entrée de gare OSM `{entrance: <id du nœud>}` (l'id figure dans le
+lien OSM de la fiche). Entrées de la gare Monaco-Monte-Carlo : Saint Dévote / Belgique `6509083173`,
+Port Hercule `4326086615`, Parvis Sainte-Dévote `1690189840`, Fontvieille / Le Rocher `6865960165`. Plus simple : tracer le trajet
 dans l'application avec « Mon trajet », puis cliquer sur **Copier pour itineraries.json**.
 
 Pour une autre destination, l'ajouter dans `destinations` et y faire référence par sa clé dans `to`.

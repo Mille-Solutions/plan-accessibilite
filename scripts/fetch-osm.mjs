@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildNetwork } from '../js/network-builder.js';
 import { extractPois } from '../js/poi-extractor.js';
+import { Router } from '../js/router.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'data');
@@ -38,6 +39,7 @@ out body qt;`;
 const POI_QUERY = `[out:json][timeout:120];
 (
   nwr["highway"="elevator"](${bbox});
+  node["railway"~"^(train_station_entrance|subway_entrance)$"](${bbox});
   way["highway"="steps"](${bbox});
   nwr["ramp"="yes"](${bbox});
   nwr["ramp:wheelchair"="yes"](${bbox});
@@ -100,9 +102,18 @@ pois.generated = network.generated;
 const routableWays = new Set(network.ways.filter((w) => w.highway === 'elevator').map((w) => `way/${w.id}`));
 for (const f of pois.features) {
   const p = f.properties;
-  if (p.category !== 'elevator') continue;
+  if (p.category !== 'elevator' && p.category !== 'entrance') continue;
   const [type, id] = p.osm.split('/');
   p.routable = type === 'node' ? osmIndex.has(Number(id)) : routableWays.has(p.osm);
+}
+// Entrées de gare : accessibles sans marches si un itinéraire PMR les relie au port (Yacht Club)
+const router = new Router(network);
+const PORT = { lat: 43.73775, lon: 7.42745 };
+for (const f of pois.features) {
+  const p = f.properties;
+  if (p.category !== 'entrance' || !p.routable) continue;
+  const res = router.route({ from: { entrance: Number(p.osm.split('/')[1]) }, to: PORT, options: { respectHours: false } });
+  p.stepFree = res.ok;
 }
 await writeFile(join(DATA, 'pois.geojson'), JSON.stringify(pois));
 const counts = {};

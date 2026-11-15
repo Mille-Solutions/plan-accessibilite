@@ -10,6 +10,7 @@ const ELEVATOR_TIME = 1.5;   // min par ascenseur (attente + trajet)
 
 const CATEGORIES = [
   { id: 'elevator', color: 'var(--c-elevator)', hex: '#0b63ce', glyph: '⇅', on: true },
+  { id: 'entrance', color: 'var(--c-entrance)', hex: '#334155', glyph: '🚉', on: true },
   { id: 'escalator', color: 'var(--c-escalator)', hex: '#6d28d9', glyph: '↗', on: true, line: true },
   { id: 'ramp', color: 'var(--c-ramp)', hex: '#146c2e', glyph: '⟋', on: true, line: true },
   { id: 'steps', color: 'var(--c-steps)', hex: '#c2261b', glyph: '⚠', on: true, line: true, dashed: true },
@@ -102,6 +103,7 @@ function popupHtml(p) {
   if (p.incline) rows.push([t('incline'), esc(p.incline)]);
   if (p['capacity:disabled']) rows.push([t('capacityDisabled'), esc(p['capacity:disabled'])]);
   if (p.category === 'elevator') rows.push([t('routable'), esc(p.routable ? t('yes') : t('no'))]);
+  if (p.category === 'entrance') rows.push([t('stepFree'), esc(p.stepFree ? t('yes') : t('stepFreeNo'))]);
   const photo = photoUrl(p);
   return `<h4>${esc(title)}</h4>
     <div class="muted">${esc(t(`cat_${p.category}`))}</div>
@@ -128,11 +130,11 @@ function buildLayers() {
         if (cat.small) layer = L.circleMarker([y, x], { radius: 5, color: '#fff', weight: 2, fillColor: cat.hex, fillOpacity: 1 });
         else {
           layer = L.marker([y, x], {
-            icon: poiIcon(cat, cat.id === 'elevator' && !p.routable),
+            icon: poiIcon(cat, (cat.id === 'elevator' && !p.routable) || (cat.id === 'entrance' && !p.stepFree)),
             title: p.name || t(`cat_${cat.id}`),
             alt: p.name || t(`cat_${cat.id}`),
             keyboard: true,
-            zIndexOffset: cat.id === 'elevator' ? 500 : 0,
+            zIndexOffset: cat.id === 'entrance' ? 600 : cat.id === 'elevator' ? 500 : 0,
           });
         }
       }
@@ -300,6 +302,7 @@ function drawRoute(res, walk) {
 }
 
 function stepText(s) {
+  if (s.type === 'entrance') return `${t('stationEntrance')}${s.name ? ` « ${s.name} »` : ''}`;
   if (s.type === 'elevator') {
     const name = s.name ? ` « ${s.name} »` : '';
     return `${t('takeElevator')}${name}`;
@@ -312,7 +315,7 @@ function stepText(s) {
 function renderResult(res, walk) {
   const box = $('result');
   if (!res.ok) {
-    const msg = res.reason === 'no-network' ? t('noNetwork') : res.reason === 'unknown-elevator' ? t('unknownElevator') : t('noPath');
+    const msg = res.reason === 'no-network' ? t('noNetwork') : res.reason === 'unknown-point' ? t('unknownPoint') : t('noPath');
     box.innerHTML = `<p class="error">${esc(msg)}</p>${res.reason === 'no-path' && $('opt-hours').checked ? `<p class="hint">${esc(t('noPathHours'))}</p>` : ''}`;
     return;
   }
@@ -326,7 +329,7 @@ function renderResult(res, walk) {
     }).join('')}</ul>`
     : `<p class="hint">${esc(t('noElevator'))}</p>`;
   const warns = [...res.warnings.map((w) => t(`warn_${w}`)), t('warnData')];
-  const steps = res.steps.map((s) => `<li class="${s.type === 'elevator' ? 'elev' : ''}">${esc(stepText(s))}</li>`).join('');
+  const steps = res.steps.map((s) => `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${esc(stepText(s))}</li>`).join('');
   box.innerHTML = `
     <div class="summary">
       <div><span class="k">${esc(t('distance'))}</span><span class="v">${esc(fmtDist(res.distance))}</span></div>

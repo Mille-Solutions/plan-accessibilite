@@ -133,20 +133,29 @@ export class Router {
 
   /** Index de nœud de l'ascenseur OSM (nœud) d'identifiant donné, ou -1. */
   elevatorNode(osmId) {
-    for (const [k, v] of Object.entries(this.net.elevators)) {
+    return this._findNode(this.net.elevators, osmId);
+  }
+
+  /** Index de nœud de l'entrée de gare OSM d'identifiant donné, ou -1. */
+  entranceNode(osmId) {
+    return this._findNode(this.net.entrances || {}, osmId);
+  }
+
+  _findNode(table, osmId) {
+    for (const [k, v] of Object.entries(table)) {
       if (v.id === osmId && !v.way) return Number(k);
     }
     return -1;
   }
 
-  /** Coordonnées d'un point {lat, lon} ou {elevator: id}. */
+  /** Coordonnées d'un point {lat, lon}, {elevator: id} ou {entrance: id}. */
   resolve(point) {
-    if (point.elevator !== undefined) {
-      const i = this.elevatorNode(point.elevator);
-      if (i < 0) return null;
-      return { ...point, lat: this.lat(i), lon: this.lon(i), node: i };
-    }
-    return point;
+    let i;
+    if (point.elevator !== undefined) i = this.elevatorNode(point.elevator);
+    else if (point.entrance !== undefined) i = this.entranceNode(point.entrance);
+    else return point;
+    if (i < 0) return null;
+    return { ...point, lat: this.lat(i), lon: this.lon(i), node: i };
   }
 
   _pointCandidates(p, opt) {
@@ -229,7 +238,7 @@ export class Router {
     if (!opt.date) opt.date = new Date();
     const points = [from, ...via, to].map((p) => this.resolve(p));
     const missing = points.findIndex((p) => !p);
-    if (missing >= 0) return { ok: false, reason: 'unknown-elevator', leg: Math.max(0, missing - 1) };
+    if (missing >= 0) return { ok: false, reason: 'unknown-point', leg: Math.max(0, missing - 1) };
     const result = { ok: true, coords: [], distance: 0, elevators: [], warnings: new Set(), steps: [], legs: [], pathEdges: [] };
     for (let l = 0; l < points.length - 1; l++) {
       const a = points[l], b = points[l + 1];
@@ -253,6 +262,11 @@ export class Router {
 
   _addElevator(key, info, opt, result) {
     if (result.elevators.some((x) => x.key === key)) return;
+    // Un même ascenseur est parfois cartographié par deux nœuds (rue et sous-sol) : on n'en compte qu'un
+    const prev = result.elevators[result.elevators.length - 1];
+    const last = result.steps[result.steps.length - 1];
+    if (prev && info.name && prev.name === info.name && last &&
+        (last.type === 'elevator' || (last.type === 'walk' && last.distance < 15))) return;
     const open = isOpen(info.opening_hours, opt.date);
     result.elevators.push({ key, id: info.id, name: info.name, opening_hours: info.opening_hours, open, wheelchair: info.wheelchair, level: info.level });
     if (!info.opening_hours) result.warnings.add('elevator-hours-unknown');
@@ -268,8 +282,12 @@ export class Router {
     const E = this.net.edges;
     let dist = 0;
     const addElevator = (key, info) => this._addElevator(key, info, opt, result);
+    const entrances = this.net.entrances || {};
     found.path.forEach((i, idx) => {
       if (this.net.elevators[i] && idx > 0 && idx < found.path.length - 1) addElevator(`n${i}`, this.net.elevators[i]);
+      if (entrances[i] && !result.steps.some((s) => s.key === `e${i}`)) {
+        result.steps.push({ type: 'entrance', key: `e${i}`, name: entrances[i].name });
+      }
       const e = found.pathEdges[idx];
       if (e === undefined) return;
       result.pathEdges.push(e);

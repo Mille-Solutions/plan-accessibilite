@@ -7,6 +7,7 @@
 //   ways     : [{ id, name, highway }]         (référencés par edges[*].way)
 //   elevators: { indexNœud: { id, name, opening_hours, wheelchair, level } }
 //   barriers : { indexNœud: { id, kind } }     (obstacles infranchissables en fauteuil)
+//   entrances: { indexNœud: { id, name, wheelchair, level } }  (entrées de gare)
 
 export const FLAGS = {
   STEPS: 1,
@@ -109,6 +110,7 @@ export function buildNetwork(overpassJson) {
   const ways = [];
   const elevators = {};
   const barriers = {};
+  const entrances = {};
   const index = new Map(); // id OSM → index de nœud
 
   const nodeIndex = (id) => {
@@ -128,6 +130,8 @@ export function buildNetwork(overpassJson) {
         wheelchair: t.wheelchair || null,
         level: t.level || null,
       };
+    } else if (t.railway === 'train_station_entrance' || t.railway === 'subway_entrance') {
+      entrances[i] = { id: n.id, name: t.name || null, wheelchair: t.wheelchair || null, level: t.level || null };
     } else {
       const b = isBarrier(t);
       if (b) barriers[i] = { id: n.id, kind: b };
@@ -159,5 +163,5 @@ export function buildNetwork(overpassJson) {
     }
   }
 
-  return { version: 1, nodes, edges, ways, elevators, barriers, osmIndex: index };
+  return { version: 1, nodes, edges, ways, elevators, barriers, entrances, osmIndex: index };
 }

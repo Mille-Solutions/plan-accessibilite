@@ -20,6 +20,7 @@
   --c-toilets: #0e7490;
   --c-parking: #1d4ed8;
   --c-kerb: #a16207;
+  --c-entrance: #334155;
   --panel-w: 400px;
   --radius: 12px;
   --tap: 48px;
@@ -166,6 +167,7 @@ body {
 .step-list { margin: 0; padding-left: 22px; }
 .step-list li { padding: 3px 0; }
 .step-list li.elev { font-weight: 700; color: var(--c-elevator); }
+.step-list li.entr { font-weight: 700; }
 .walk-compare { color: var(--muted); font-size: .9rem; }
 
 /* Couches */

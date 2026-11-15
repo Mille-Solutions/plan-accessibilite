@@ -25,11 +25,30 @@ for (const it of itineraries) {
   });
 }
 
-test('le trajet 1 passe par les deux ascenseurs de la gare', () => {
+test('le trajet 1 traverse la gare par la galerie Sainte-Dévote, sans détour', () => {
   const it = itineraries.find((x) => x.id === 'belgique-gare');
   const res = router.route({ from: it.from, via: it.via, to: destinations[it.to], options: { date: MONDAY_10H } });
-  const ids = res.elevators.map((e) => e.id);
-  for (const v of it.via) assert.ok(ids.includes(v.elevator), `ascenseur ${v.elevator} absent`);
+  assert.ok(res.ok);
+  assert.ok(res.elevators.some((e) => e.name === 'Saint Dévote / Belgique'), 'ascenseur Sainte-Dévote / Belgique absent');
+  assert.equal(res.elevators.length, 1, 'ascenseur compté en double');
+  assert.ok(res.steps.some((s) => s.type === 'entrance' && s.name === 'Port Hercule'), 'sortie Port Hercule absente');
+  assert.ok(res.steps.some((s) => s.name === 'Galerie Sainte-Dévote'), 'galerie Sainte-Dévote absente');
+  assert.ok(res.distance < 900, `trajet trop long : ${res.distance} m`);
+});
+
+// Entrées de gare accessibles sans marches d'après OSM. « Place Sainte-Devote » (13019850394)
+// n'est reliée qu'à des escaliers dans OSM : elle est volontairement absente de cette liste.
+const STEP_FREE_ENTRANCES = {
+  'Saint Dévote / Belgique': 6509083173,
+  'Parvis Sainte-Devote': 1690189840,
+  'Fontvielle / Le Rocher': 6865960165,
+};
+
+test('les entrées accessibles de la gare sont reliées à la sortie Port Hercule sans escaliers', () => {
+  for (const [name, id] of Object.entries(STEP_FREE_ENTRANCES)) {
+    const res = router.route({ from: { entrance: id }, to: { entrance: 4326086615 }, options: { respectHours: false } });
+    assert.ok(res.ok, `entrée « ${name} » non reliée à la sortie Port Hercule`);
+  }
 });
 
 test('sans contrainte fauteuil, le trajet peut être plus court (escaliers autorisés)', () => {

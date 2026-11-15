@@ -1,5 +1,5 @@
 // Transforme une réponse Overpass en GeoJSON de points d'intérêt PMR, classés par catégorie.
-// Catégories : elevator, escalator, ramp, steps, toilets, parking, kerb
+// Catégories : elevator, entrance, escalator, ramp, steps, toilets, parking, kerb
 
 const KEEP_TAGS = [
   'name', 'description', 'opening_hours', 'wheelchair', 'wheelchair:description', 'level',
@@ -10,6 +10,7 @@ const KEEP_TAGS = [
 
 export function categorize(t) {
   if (t.highway === 'elevator') return 'elevator';
+  if (t.railway === 'train_station_entrance' || t.railway === 'subway_entrance') return 'entrance';
   if (t.highway === 'steps') {
     if (t.conveying) return 'escalator';
     if (t['ramp:wheelchair'] === 'yes') return 'ramp';
