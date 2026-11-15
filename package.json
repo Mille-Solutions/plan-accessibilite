@@ -1,0 +1,12 @@
+{
+  "name": "plan-accessibilite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Carte d'accessibilité PMR de Monaco et Beausoleil",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8765",
+    "data": "node scripts/fetch-osm.mjs",
+    "test": "node --test tests/"
+  }
+}

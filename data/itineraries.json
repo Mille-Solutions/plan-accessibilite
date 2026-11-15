@@ -1,0 +1,52 @@
+{
+  "_comment": "Pour ajouter un trajet : copier un bloc de 'itineraries', changer id/name/from (et via si besoin). Un point de passage peut être des coordonnées {lat, lon} ou un ascenseur OSM {elevator: <id du nœud OSM>}. Le bouton « Copier pour itineraries.json » de l'application génère ce bloc depuis un trajet tracé sur la carte.",
+  "destinations": {
+    "ycm": {
+      "name": { "fr": "Yacht Club de Monaco", "en": "Yacht Club de Monaco" },
+      "lat": 43.73775,
+      "lon": 7.42745
+    }
+  },
+  "itineraries": [
+    {
+      "id": "belgique-gare",
+      "name": {
+        "fr": "Bd de Belgique → Yacht Club, par les ascenseurs de la gare",
+        "en": "Bd de Belgique → Yacht Club, via the station lifts"
+      },
+      "from": { "lat": 43.73685, "lon": 7.41862, "label": { "fr": "Début du boulevard de Belgique", "en": "Start of Boulevard de Belgique" } },
+      "via": [
+        { "elevator": 1870233769, "label": { "fr": "Ascenseur Sainte-Dévote / Belgique", "en": "Sainte-Dévote / Belgique lift" } },
+        { "elevator": 6848669737, "label": { "fr": "Ascenseur de la gare (sortie Sainte-Dévote)", "en": "Station lift (Sainte-Dévote exit)" } }
+      ],
+      "to": "ycm"
+    },
+    {
+      "id": "adagio",
+      "name": {
+        "fr": "Adagio Beausoleil → Yacht Club",
+        "en": "Adagio Beausoleil → Yacht Club"
+      },
+      "from": { "lat": 43.74269, "lon": 7.42564, "label": { "fr": "Aparthotel Adagio, Beausoleil", "en": "Adagio Aparthotel, Beausoleil" } },
+      "to": "ycm"
+    },
+    {
+      "id": "odalys",
+      "name": {
+        "fr": "Odalys Beausoleil → Yacht Club",
+        "en": "Odalys Beausoleil → Yacht Club"
+      },
+      "from": { "lat": 43.74528, "lon": 7.42824, "label": { "fr": "Odalys Les Hauts de la Principauté", "en": "Odalys Les Hauts de la Principauté" } },
+      "to": "ycm"
+    },
+    {
+      "id": "odeon",
+      "name": {
+        "fr": "Beausoleil (Tour Odéon) → Yacht Club",
+        "en": "Beausoleil (Odéon Tower) → Yacht Club"
+      },
+      "from": { "lat": 43.74865, "lon": 7.43005, "label": { "fr": "Beausoleil, près de la Tour Odéon", "en": "Beausoleil, near the Odéon Tower" } },
+      "to": "ycm"
+    }
+  ]
+}

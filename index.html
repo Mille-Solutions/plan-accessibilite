@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Carte PMR Monaco</title>
+  <meta name="description" content="Carte d'accessibilité PMR de Monaco et Beausoleil : ascenseurs publics, accès et itinéraires sans escaliers.">
+  <meta name="theme-color" content="#0b4f8a">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#panel" data-i18n="tabRoute">Itinéraire</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">♿</span>
+      <div>
+        <h1 data-i18n="title">Carte PMR Monaco</h1>
+        <p class="subtitle" data-i18n="subtitle">Ascenseurs, accès et trajets sans escaliers</p>
+      </div>
+    </div>
+    <button id="lang-btn" class="btn btn-ghost" type="button" data-i18n="langSwitch">English</button>
+  </header>
+
+  <main class="layout">
+    <aside id="panel" class="panel" aria-labelledby="panel-title">
+      <button id="panel-toggle" class="panel-handle" type="button" aria-expanded="true" data-i18n-aria="hidePanel">
+        <span aria-hidden="true"></span>
+      </button>
+      <h2 id="panel-title" class="visually-hidden" data-i18n="tabRoute">Itinéraire</h2>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-route" aria-controls="pane-route" aria-selected="true" data-i18n="tabRoute">Itinéraire</button>
+        <button role="tab" id="tab-layers" aria-controls="pane-layers" aria-selected="false" tabindex="-1" data-i18n="tabLayers">Couches</button>
+        <button role="tab" id="tab-about" aria-controls="pane-about" aria-selected="false" tabindex="-1" data-i18n="tabAbout">À propos</button>
+      </div>
+
+      <div class="panel-body">
+        <!-- Itinéraire -->
+        <section id="pane-route" role="tabpanel" aria-labelledby="tab-route">
+          <h3 data-i18n="referenceTrips">Trajets vers le Yacht Club</h3>
+          <div id="trip-list" class="trip-list"></div>
+
+          <h3 data-i18n="customTrip">Mon trajet</h3>
+          <div class="endpoint">
+            <span class="pin pin-a" aria-hidden="true">A</span>
+            <div class="endpoint-text">
+              <span class="endpoint-label" data-i18n="from">Départ</span>
+              <span id="from-value" class="endpoint-value"></span>
+            </div>
+            <button id="pick-from" class="btn btn-small" type="button" data-i18n="pickOnMap">Choisir sur la carte</button>
+          </div>
+          <button id="locate-btn" class="btn btn-link" type="button" data-i18n="myPosition">Ma position</button>
+          <div class="endpoint">
+            <span class="pin pin-b" aria-hidden="true">B</span>
+            <div class="endpoint-text">
+              <span class="endpoint-label" data-i18n="to">Arrivée</span>
+              <span id="to-value" class="endpoint-value"></span>
+            </div>
+            <button id="pick-to" class="btn btn-small" type="button" data-i18n="pickOnMap">Choisir sur la carte</button>
+          </div>
+          <p id="pick-hint" class="hint" hidden></p>
+
+          <details class="options">
+            <summary data-i18n="options">Options</summary>
+            <label class="check"><input type="checkbox" id="opt-steep" checked> <span data-i18n="avoidSteep">Éviter les fortes pentes</span></label>
+            <label class="check"><input type="checkbox" id="opt-hours" checked> <span data-i18n="respectHours">Tenir compte des horaires des ascenseurs</span></label>
+            <label class="field"><span data-i18n="departure">Heure de départ</span> <input type="datetime-local" id="opt-date"></label>
+            <label class="check"><input type="checkbox" id="opt-walk"> <span data-i18n="compareWalk">Afficher aussi le trajet piéton</span></label>
+          </details>
+
+          <div class="actions">
+            <button id="calc-btn" class="btn btn-primary" type="button" data-i18n="calculate">Calculer l'itinéraire</button>
+            <button id="clear-btn" class="btn" type="button" data-i18n="clear">Effacer</button>
+          </div>
+
+          <div id="result" class="result" aria-live="polite"></div>
+
+          <details class="options" id="ors-box">
+            <summary data-i18n="orsTitle">OpenRouteService (optionnel)</summary>
+            <p class="hint" data-i18n="orsHelp"></p>
+            <label class="field"><span data-i18n="orsKey">Clé API</span> <input type="password" id="ors-key" autocomplete="off" spellcheck="false"></label>
+            <button id="ors-btn" class="btn" type="button" data-i18n="orsCompare">Comparer avec OpenRouteService</button>
+            <p id="ors-result" class="hint" aria-live="polite"></p>
+          </details>
+        </section>
+
+        <!-- Couches -->
+        <section id="pane-layers" role="tabpanel" aria-labelledby="tab-layers" hidden>
+          <h3 data-i18n="layers">Couches affichées</h3>
+          <div id="layer-list" class="layer-list"></div>
+        </section>
+
+        <!-- À propos -->
+        <section id="pane-about" role="tabpanel" aria-labelledby="tab-about" hidden>
+          <p data-i18n="aboutText"></p>
+          <p id="data-date" class="hint"></p>
+        </section>
+      </div>
+    </aside>
+
+    <div id="map" class="map" role="region" data-i18n-aria="mapAria"></div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
