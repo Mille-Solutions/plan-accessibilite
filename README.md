@@ -10,7 +10,7 @@ Première version, construite à partir du plan « Carte d'accessibilité PMR �
 Les données sont chargées en `fetch`, il faut donc un petit serveur web (pas de `file://`) :
 
 ```bash
-python3 -m http.server 8765
+python3 scripts/serve.py 8765
 ```
 
 puis ouvrir <http://localhost:8765>.

@@ -233,3 +233,31 @@ body.picking .map { cursor: crosshair; }
   .status { transform: translateX(-50%); }
   .panel-body { padding: 4px 16px 16px; }
 }
+
+/* Groupes de marqueurs superposés */
+.poi-cluster { position: relative; display: inline-block; width: 44px; height: 32px; }
+.poi-cluster .poi-icon { position: absolute; left: 0; top: 1px; }
+.poi-cluster-count {
+  position: absolute; left: 20px; top: -4px; min-width: 22px; height: 22px; padding: 0 5px;
+  border-radius: 11px; background: #13171c; color: #fff; font: 700 12px/22px system-ui, sans-serif;
+  text-align: center; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+/* Étapes de l'itinéraire (ascenseurs, entrées de gare) */
+.route-stops { display: flex; gap: 4px; }
+.route-stop { position: relative; display: grid; place-items: center; width: 40px; height: 40px; }
+.route-stop .poi-icon {
+  width: 36px; height: 36px; font-size: 17px; border-width: 3px;
+  box-shadow: 0 0 0 3px #0b63ce, 0 2px 6px rgba(0,0,0,.5);
+}
+.route-stop-num {
+  position: absolute; right: -8px; top: -8px; width: 22px; height: 22px; border-radius: 50%;
+  background: #ffbf00; color: #13171c; font: 800 13px/22px system-ui, sans-serif; text-align: center;
+  border: 2px solid #13171c;
+}
+.route-stop-num.inline { position: static; display: inline-block; vertical-align: middle; margin-right: 4px; }
+
+/* Quand un itinéraire est affiché, les autres repères passent au second plan */
+.map.has-route .leaflet-marker-pane .poi-icon:not(.route-stop .poi-icon),
+.map.has-route .leaflet-marker-pane .poi-cluster { opacity: .45; }
+.map.has-route .leaflet-overlay-pane path.leaflet-interactive:not(.route-line) { opacity: .35; }

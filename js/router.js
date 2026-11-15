@@ -260,7 +260,7 @@ export class Router {
     return result;
   }
 
-  _addElevator(key, info, opt, result) {
+  _addElevator(key, info, opt, result, node) {
     if (result.elevators.some((x) => x.key === key)) return;
     // Un même ascenseur est parfois cartographié par deux nœuds (rue et sous-sol) : on n'en compte qu'un
     const prev = result.elevators[result.elevators.length - 1];
@@ -268,25 +268,26 @@ export class Router {
     if (prev && info.name && prev.name === info.name && last &&
         (last.type === 'elevator' || (last.type === 'walk' && last.distance < 15))) return;
     const open = isOpen(info.opening_hours, opt.date);
-    result.elevators.push({ key, id: info.id, name: info.name, opening_hours: info.opening_hours, open, wheelchair: info.wheelchair, level: info.level });
+    const lat = this.lat(node), lon = this.lon(node);
+    result.elevators.push({ key, id: info.id, name: info.name, opening_hours: info.opening_hours, open, wheelchair: info.wheelchair, level: info.level, lat, lon });
     if (!info.opening_hours) result.warnings.add('elevator-hours-unknown');
     else if (open === null) result.warnings.add('elevator-hours-unparsed');
-    result.steps.push({ type: 'elevator', name: info.name, opening_hours: info.opening_hours, open });
+    result.steps.push({ type: 'elevator', name: info.name, opening_hours: info.opening_hours, open, level: info.level, lat, lon });
   }
 
   _noteViaElevator(node, opt, result) {
-    this._addElevator(`n${node}`, this.net.elevators[node], opt, result);
+    this._addElevator(`n${node}`, this.net.elevators[node], opt, result, node);
   }
 
   _describe(found, opt, result) {
     const E = this.net.edges;
     let dist = 0;
-    const addElevator = (key, info) => this._addElevator(key, info, opt, result);
+    const addElevator = (key, info, node) => this._addElevator(key, info, opt, result, node);
     const entrances = this.net.entrances || {};
     found.path.forEach((i, idx) => {
-      if (this.net.elevators[i] && idx > 0 && idx < found.path.length - 1) addElevator(`n${i}`, this.net.elevators[i]);
+      if (this.net.elevators[i] && idx > 0 && idx < found.path.length - 1) addElevator(`n${i}`, this.net.elevators[i], i);
       if (entrances[i] && !result.steps.some((s) => s.key === `e${i}`)) {
-        result.steps.push({ type: 'entrance', key: `e${i}`, name: entrances[i].name });
+        result.steps.push({ type: 'entrance', key: `e${i}`, name: entrances[i].name, lat: this.lat(i), lon: this.lon(i) });
       }
       const e = found.pathEdges[idx];
       if (e === undefined) return;
@@ -295,7 +296,7 @@ export class Router {
       const f = E[5 * e + 3];
       const way = this.net.ways[E[5 * e + 4]];
       dist += len;
-      if (f & FLAGS.ELEVATOR) { addElevator(`w${E[5 * e + 4]}`, this.net.elevators[`w${E[5 * e + 4]}`] || { id: way.id }); return; }
+      if (f & FLAGS.ELEVATOR) { addElevator(`w${E[5 * e + 4]}`, this.net.elevators[`w${E[5 * e + 4]}`] || { id: way.id }, i); return; }
       if (f & FLAGS.STEEP) result.warnings.add('steep');
       if (f & FLAGS.NO_SIDEWALK) result.warnings.add('no-sidewalk');
       if (f & FLAGS.ROUGH) result.warnings.add('rough');

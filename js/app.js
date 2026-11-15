@@ -40,14 +40,37 @@ function store(key, value) { try { localStorage.setItem(key, value); } catch { /
 function recall(key) { try { return localStorage.getItem(key); } catch { return null; } }
 
 // ---------------------------------------------------------------- Carte
-const map = L.map('map', { zoomControl: true, minZoom: 13, maxZoom: 19 }).setView(CENTER, 15);
+const MAX_ZOOM = 21; // au-delà de 19, les tuiles OSM sont agrandies : utile pour séparer les marqueurs proches
+const map = L.map('map', { zoomControl: true, minZoom: 13, maxZoom: MAX_ZOOM }).setView(CENTER, 15);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
+  maxZoom: MAX_ZOOM,
+  maxNativeZoom: 19,
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
 
 const routeLayer = L.layerGroup().addTo(map);
 const markerLayer = L.layerGroup().addTo(map);
+
+// Les marqueurs ponctuels (toutes catégories) sont regroupés quand ils se chevauchent.
+// Un clic sur un groupe zoome dessus ; au zoom maximal, le groupe s'ouvre en éventail.
+const poiCluster = L.markerClusterGroup({
+  maxClusterRadius: (z) => (z >= 19 ? 18 : z >= 17 ? 30 : 45),
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  spiderfyDistanceMultiplier: 1.6,
+  iconCreateFunction(cluster) {
+    const counts = {};
+    for (const m of cluster.getAllChildMarkers()) counts[m.options.category] = (counts[m.options.category] || 0) + 1;
+    const top = CATEGORIES.find((c) => counts[c.id]);
+    const n = cluster.getChildCount();
+    return L.divIcon({
+      className: '',
+      html: `<span class="poi-cluster"><span class="poi-icon" style="background:${top.hex}" aria-hidden="true">${top.glyph}</span><span class="poi-cluster-count">${n}</span></span>`,
+      iconSize: [44, 32],
+      iconAnchor: [15, 16],
+    });
+  },
+}).addTo(map);
 
 function pinIcon(cls, text) {
   return L.divIcon({ className: '', html: `<span class="pin ${cls}">${esc(text)}</span>`, iconSize: [34, 34], iconAnchor: [17, 17] });
@@ -124,12 +147,13 @@ function buildLayers() {
       let layer;
       if (f.geometry.type === 'LineString') {
         const latlngs = f.geometry.coordinates.map(([x, y]) => [y, x]);
-        layer = L.polyline(latlngs, { color: cat.hex, weight: 6, opacity: 0.85, dashArray: cat.dashed ? '6 6' : null });
+        layer = L.polyline(latlngs, { color: cat.hex, weight: 4, opacity: 0.75, dashArray: cat.dashed ? '5 5' : null });
       } else {
         const [x, y] = f.geometry.coordinates;
         if (cat.small) layer = L.circleMarker([y, x], { radius: 5, color: '#fff', weight: 2, fillColor: cat.hex, fillOpacity: 1 });
         else {
           layer = L.marker([y, x], {
+            category: cat.id,
             icon: poiIcon(cat, (cat.id === 'elevator' && !p.routable) || (cat.id === 'entrance' && !p.stepFree)),
             title: p.name || t(`cat_${cat.id}`),
             alt: p.name || t(`cat_${cat.id}`),
@@ -143,10 +167,18 @@ function buildLayers() {
     }
     const saved = recall(`layer:${cat.id}`);
     const on = saved === null ? cat.on : saved === '1';
-    state.layers[cat.id] = { group, count: feats.length, on };
-    if (on) group.addTo(map);
+    const clustered = !cat.line && !cat.small;
+    state.layers[cat.id] = { group, count: feats.length, on, clustered };
+    showLayer(state.layers[cat.id], on);
   }
   renderLayerList();
+}
+
+function showLayer(l, on) {
+  if (l.clustered) {
+    if (on) poiCluster.addLayers(l.group.getLayers()); else poiCluster.removeLayers(l.group.getLayers());
+  } else if (on) l.group.addTo(map);
+  else map.removeLayer(l.group);
 }
 
 function renderLayerList() {
@@ -165,7 +197,7 @@ function renderLayerList() {
     btn.innerHTML = `<span class="check-mark" aria-hidden="true">${l.on ? '✓' : ''}</span>${sym}<span>${esc(t(`cat_${cat.id}`))}</span><span class="count">${l.count}</span>`;
     btn.addEventListener('click', () => {
       l.on = !l.on;
-      if (l.on) l.group.addTo(map); else map.removeLayer(l.group);
+      showLayer(l, l.on);
       store(`layer:${cat.id}`, l.on ? '1' : '0');
       renderLayerList();
       list.querySelectorAll('.layer-btn')[CATEGORIES.indexOf(cat)]?.focus();
@@ -227,6 +259,8 @@ function renderEndpoints() {
       .addTo(markerLayer);
   }
   state.via.forEach((v, i) => {
+    // les passages par un ascenseur ou une entrée sont mis en évidence par drawRoute
+    if (v.elevator !== undefined || v.entrance !== undefined) return;
     const r = state.router?.resolve(v);
     if (!r) return;
     L.marker([r.lat, r.lon], { icon: pinIcon('pin-v', String(i + 1)), title: `${t('viaMarker')} ${i + 1} – ${loc(v.label)}`, zIndexOffset: 900 })
@@ -290,15 +324,49 @@ function calculate() {
   renderResult(res, walk);
 }
 
+/** Étapes remarquables du trajet (ascenseurs, entrées de gare), numérotées dans l'ordre. */
+function routeStops(res) {
+  return res.steps.filter((s) => (s.type === 'elevator' || s.type === 'entrance') && s.lat !== undefined);
+}
+
+/** Regroupe les étapes consécutives distantes de moins de 25 m (ex. entrée de gare + ascenseur). */
+function groupStops(stops) {
+  const groups = [];
+  stops.forEach((s, k) => {
+    const g = groups[groups.length - 1];
+    const prev = g && g[g.length - 1].stop;
+    if (prev && L.latLng(prev.lat, prev.lon).distanceTo([s.lat, s.lon]) < 25) g.push({ stop: s, n: k + 1 });
+    else groups.push([{ stop: s, n: k + 1 }]);
+  });
+  return groups;
+}
+
+function stopIcon(group) {
+  const html = group.map(({ stop, n }) => {
+    const cat = CATEGORIES.find((c) => c.id === stop.type);
+    return `<span class="route-stop"><span class="poi-icon" style="background:${cat.hex}" aria-hidden="true">${cat.glyph}</span><span class="route-stop-num">${n}</span></span>`;
+  }).join('');
+  const w = 44 * group.length;
+  return L.divIcon({ className: '', html: `<span class="route-stops">${html}</span>`, iconSize: [w, 40], iconAnchor: [w / 2, 20] });
+}
+
 function drawRoute(res, walk) {
   routeLayer.clearLayers();
+  document.getElementById('map').classList.toggle('has-route', !!res.ok);
   if (walk && walk.ok) {
-    L.polyline(walk.coords, { color: '#6b7280', weight: 5, opacity: 0.8, dashArray: '2 10', lineCap: 'round' }).addTo(routeLayer);
+    L.polyline(walk.coords, { color: '#6b7280', weight: 5, opacity: 0.8, dashArray: '2 10', lineCap: 'round', className: 'route-line' }).addTo(routeLayer);
   }
   if (!res.ok) return;
-  L.polyline(res.coords, { color: '#ffffff', weight: 11, opacity: 0.9 }).addTo(routeLayer);
-  const line = L.polyline(res.coords, { color: '#0b63ce', weight: 7, opacity: 0.95 }).addTo(routeLayer);
-  map.fitBounds(line.getBounds(), { padding: [40, 40] });
+  L.polyline(res.coords, { color: '#ffffff', weight: 11, opacity: 0.9, className: 'route-line' }).addTo(routeLayer);
+  const line = L.polyline(res.coords, { color: '#0b63ce', weight: 7, opacity: 0.95, className: 'route-line' }).addTo(routeLayer);
+  for (const group of groupStops(routeStops(res))) {
+    const label = group.map(({ stop, n }) => `${n}. ${stepText(stop)}`).join(' — ');
+    const { lat, lon } = group[0].stop;
+    L.marker([lat, lon], { icon: stopIcon(group), title: label, alt: label, zIndexOffset: 2000, keyboard: true })
+      .bindTooltip(group.map(({ stop, n }) => `${n}. ${esc(stepText(stop))}`).join('<br>'), { direction: 'top', offset: [0, -18] })
+      .addTo(routeLayer);
+  }
+  map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 18 });
 }
 
 function stepText(s) {
@@ -329,7 +397,12 @@ function renderResult(res, walk) {
     }).join('')}</ul>`
     : `<p class="hint">${esc(t('noElevator'))}</p>`;
   const warns = [...res.warnings.map((w) => t(`warn_${w}`)), t('warnData')];
-  const steps = res.steps.map((s) => `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${esc(stepText(s))}</li>`).join('');
+  const stops = routeStops(res);
+  const steps = res.steps.map((s) => {
+    const k = stops.indexOf(s);
+    const num = k >= 0 ? `<span class="route-stop-num inline" aria-hidden="true">${k + 1}</span> ` : '';
+    return `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${num}${esc(stepText(s))}</li>`;
+  }).join('');
   box.innerHTML = `
     <div class="summary">
       <div><span class="k">${esc(t('distance'))}</span><span class="v">${esc(fmtDist(res.distance))}</span></div>
@@ -362,6 +435,7 @@ function copyItinerary() {
 function clearRoute() {
   state.from = null; state.to = destinationPoint('ycm'); state.via = []; state.activeTrip = null;
   routeLayer.clearLayers();
+  document.getElementById('map').classList.remove('has-route');
   $('result').innerHTML = '';
   $('ors-result').textContent = '';
   renderTrips();
@@ -385,7 +459,7 @@ async function compareOrs() {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error?.message || `HTTP ${res.status}`);
     const feat = json.features[0];
-    L.geoJSON(feat, { style: { color: '#d97706', weight: 5, opacity: 0.9, dashArray: '10 6' } }).addTo(routeLayer);
+    L.geoJSON(feat, { style: { color: '#d97706', weight: 5, opacity: 0.9, dashArray: '10 6', className: 'route-line' } }).addTo(routeLayer);
     out.textContent = t('orsResult', { d: fmtDist(feat.properties.summary.distance) });
   } catch (err) {
     out.textContent = t('orsError', { e: err.message });
