@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611151735';
-import { isOpen } from './hours.js?v=202611151735';
+import { FLAGS, haversine } from './network-builder.js?v=202611151740';
+import { isOpen } from './hours.js?v=202611151740';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles

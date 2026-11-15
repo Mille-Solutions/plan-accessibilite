@@ -2,6 +2,7 @@
 
 export const STRINGS = {
   fr: {
+    eventName: '— Navicap Challenge',
     title: 'Carte PMR Monaco',
     subtitle: 'Ascenseurs, accès et trajets sans escaliers',
     langSwitch: 'English',
@@ -92,7 +93,7 @@ export const STRINGS = {
     orsCompare: 'Comparer avec OpenRouteService',
     orsResult: 'OpenRouteService fauteuil : {d}',
     orsError: 'Erreur OpenRouteService : {e}',
-    aboutText: 'Prototype de carte d’accessibilité pour Monaco et Beausoleil. Données © contributeurs OpenStreetMap (ODbL). Le calcul d’itinéraire est fait dans votre navigateur et exclut escaliers, escalators et passages signalés non accessibles.',
+    aboutText: 'Carte proposée dans le cadre du Navicap Challenge – Trophée Elena Sivoldaeva, organisé par le Yacht Club de Monaco. Elle couvre Monaco et Beausoleil. Données © contributeurs OpenStreetMap (ODbL). Le calcul d’itinéraire est fait dans votre navigateur et exclut escaliers, escalators et passages signalés non accessibles.',
     dataDate: 'Données OSM du {d}.',
     minutes: '{n} min',
     meters: '{n} m',
@@ -106,6 +107,7 @@ export const STRINGS = {
     hidePanel: 'Réduire le panneau',
   },
   en: {
+    eventName: '— Navicap Challenge',
     title: 'Monaco Accessibility Map',
     subtitle: 'Lifts, access points and step-free routes',
     langSwitch: 'Français',
@@ -196,7 +198,7 @@ export const STRINGS = {
     orsCompare: 'Compare with OpenRouteService',
     orsResult: 'OpenRouteService wheelchair: {d}',
     orsError: 'OpenRouteService error: {e}',
-    aboutText: 'Prototype accessibility map for Monaco and Beausoleil. Data © OpenStreetMap contributors (ODbL). Routing runs in your browser and excludes steps, escalators and passages marked as not accessible.',
+    aboutText: 'Map provided for the Navicap Challenge – Elena Sivoldaeva Trophy, organised by the Yacht Club de Monaco. It covers Monaco and Beausoleil. Data © OpenStreetMap contributors (ODbL). Routing runs in your browser and excludes steps, escalators and passages marked as not accessible.',
     dataDate: 'OSM data from {d}.',
     minutes: '{n} min',
     meters: '{n} m',

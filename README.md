@@ -15,6 +15,16 @@ python3 scripts/serve.py 8765
 
 puis ouvrir <http://localhost:8765>.
 
+Après une modification de `css/` ou `js/`, changer le numéro `?v=` (dans `index.html`, `js/app.js` et
+`js/router.js`) pour que les navigateurs, Safari notamment, téléchargent la nouvelle version.
+
+## Charte graphique
+
+L'interface reprend la charte du site du Navicap Challenge (Yacht Club de Monaco) : marine `#0a1f3c` /
+`#022e5f`, bleu club `#134469`, cuivre `#a65b2a` en accent, titres en Outfit capitales, texte en Poppins.
+Les couleurs sont définies en variables CSS en haut de [`css/style.css`](css/style.css) (thèmes clair et sombre),
+avec des contrastes d'au moins 4,5:1.
+
 ## Ce que fait la v1
 
 - **Carte Leaflet** sur fond OpenStreetMap, interface en français et en anglais.
