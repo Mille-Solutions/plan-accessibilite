@@ -33,7 +33,8 @@ test('le trajet 1 traverse la gare par la galerie Sainte-Dévote, sans détour',
   assert.equal(res.elevators.length, 1, 'ascenseur compté en double');
   assert.ok(res.steps.some((s) => s.type === 'entrance' && s.name === 'Port Hercule'), 'sortie Port Hercule absente');
   assert.ok(res.steps.some((s) => s.name === 'Galerie Sainte-Dévote'), 'galerie Sainte-Dévote absente');
-  assert.ok(res.distance < 900, `trajet trop long : ${res.distance} m`);
+  // ~950 m depuis que l'arrivée se fait au niveau du quai (761 m quand elle aboutissait, à tort, sur le trottoir du boulevard)
+  assert.ok(res.distance < 1100, `trajet trop long : ${res.distance} m`);
 });
 
 // Entrées de gare accessibles sans marches d'après OSM. « Place Sainte-Devote » (13019850394)
@@ -67,4 +68,15 @@ test('horaires des ascenseurs', () => {
   assert.equal(isOpen('Mo-Fr 07:00-21:00; Sa,Su off', MONDAY_10H), true);
   assert.equal(isOpen('sunrise-sunset', MONDAY_10H), null);
   assert.equal(isOpen(null, MONDAY_10H), null);
+});
+
+test('l\'arrivée au Yacht Club se fait par le Quai Louis II (niveau du port)', () => {
+  // Avant correction, l'arrivée se rattachait au trottoir du boulevard Louis II, une dizaine de mètres plus haut.
+  const QUAI_LOUIS_II = 203711529;
+  for (const from of [{ lat: 43.73705, lon: 7.4232 }, ...itineraries.map((it) => it.from)]) {
+    const res = router.route({ from, to: destinations.ycm, options: { date: MONDAY_10H } });
+    assert.ok(res.ok);
+    const lastEdge = res.pathEdges[res.pathEdges.length - 1];
+    assert.equal(network.ways[network.edges[5 * lastEdge + 4]].id, QUAI_LOUIS_II, `arrivée hors du quai depuis ${JSON.stringify(from)}`);
+  }
 });

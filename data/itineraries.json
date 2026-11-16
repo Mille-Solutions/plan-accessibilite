@@ -1,13 +1,17 @@
 {
-  "_comment": "Pour ajouter un trajet : copier un bloc de 'itineraries', changer id/name/from (et via si besoin). Un point de passage peut être des coordonnées {lat, lon}, un ascenseur OSM {elevator: <id du nœud>} ou une entrée de gare OSM {entrance: <id du nœud>}. Le bouton « Copier pour itineraries.json » de l'application génère ce bloc depuis un trajet tracé sur la carte.",
+  "_comment": "Pour ajouter un trajet : copier un bloc de 'itineraries', changer id/name/from (et via si besoin). Un point de passage peut être des coordonnées {lat, lon}, un ascenseur OSM {elevator: <id du nœud>} ou une entrée de gare OSM {entrance: <id du nœud>}. Le bouton « Copier pour itineraries.json » de l'application génère ce bloc depuis un trajet tracé sur la carte. Une destination peut préciser \"snapWays\" (identifiants de voies OSM) pour imposer la voie d'arrivée quand plusieurs niveaux se superposent.",
   "destinations": {
     "ycm": {
       "name": {
         "fr": "Yacht Club de Monaco",
         "en": "Yacht Club de Monaco"
       },
-      "lat": 43.73775,
-      "lon": 7.42745
+      "lat": 43.73748,
+      "lon": 7.42845,
+      "snapWays": [
+        203711529
+      ],
+      "_comment": "Le Yacht Club s'atteint par le Quai Louis II (niveau du port) : l'arrivée est rattachée à cette voie OSM pour ne pas aboutir sur l'avenue d'Ostende ou le boulevard Louis II, situés plus haut."
     }
   },
   "itineraries": [

@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611161128';
-import { isOpen } from './hours.js?v=202611161128';
+import { FLAGS, haversine } from './network-builder.js?v=202611161156';
+import { isOpen } from './hours.js?v=202611161156';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -13,6 +13,9 @@ const DEFAULTS = {
 };
 
 const SNAP_RADIUS = 120; // m
+// Seuls les nœuds à moins de (plus proche + SNAP_SLACK) sont candidats : sinon le trajet peut « sauter »
+// d'un niveau à l'autre (ex. trottoir de l'avenue d'Ostende → quai du port, 10 m plus bas).
+const SNAP_SLACK = 15; // m
 
 class MinHeap {
   constructor() { this.k = []; this.v = []; }
@@ -160,7 +163,26 @@ export class Router {
 
   _pointCandidates(p, opt) {
     if (p.node !== undefined) return this.nodeCost(p.node, opt) === Infinity ? [] : [{ node: p.node, dist: 0 }];
+    if (p.snapWays?.length) return this.wayCandidates(p, p.snapWays, opt);
     return this.candidates(p.lat, p.lon, opt);
+  }
+
+  /** Nœuds des voies OSM données (ex. le quai d'un bâtiment), les plus proches du point. */
+  wayCandidates(p, wayIds, opt, max = 4) {
+    const wanted = new Set(wayIds.map(Number));
+    const E = this.net.edges;
+    const seen = new Set();
+    const out = [];
+    for (let e = 0; e < E.length / 5; e++) {
+      if (!wanted.has(this.net.ways[E[5 * e + 4]].id)) continue;
+      for (const i of [E[5 * e], E[5 * e + 1]]) {
+        if (seen.has(i)) continue;
+        seen.add(i);
+        if (this._usable(i, opt)) out.push({ node: i, dist: haversine(p.lat, p.lon, this.lat(i), this.lon(i)) });
+      }
+    }
+    out.sort((a, b) => a.dist - b.dist);
+    return out.slice(0, max);
   }
 
   /** Nœuds candidats autour d'un point : [{ node, dist }] triés par distance. */
@@ -180,7 +202,8 @@ export class Router {
     }
     out.sort((a, b) => a.dist - b.dist);
     if (!out.length && radius < 600) return this.candidates(lat, lon, opt, radius * 2.5, max);
-    return out.slice(0, max);
+    const limit = out.length ? out[0].dist + SNAP_SLACK : 0;
+    return out.filter((c) => c.dist <= limit).slice(0, max);
   }
 
   _search(sources, targets, opt) {

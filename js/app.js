@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611161128';
-import { isOpen } from './hours.js?v=202611161128';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161128';
+import { Router } from './router.js?v=202611161156';
+import { isOpen } from './hours.js?v=202611161156';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161156';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -301,7 +301,7 @@ function renderLayerList() {
 // ---------------------------------------------------------------- Trajets de référence
 function destinationPoint(key) {
   const d = state.itineraries.destinations[key];
-  return d ? { lat: d.lat, lon: d.lon, label: d.name } : null;
+  return d ? { lat: d.lat, lon: d.lon, label: d.name, snapWays: d.snapWays } : null;
 }
 
 function renderTrips() {
@@ -797,7 +797,7 @@ function openFromUrl() {
   const dest = Object.values(state.itineraries.destinations)
     .find((d) => Math.abs(d.lat - to.lat) < 1e-4 && Math.abs(d.lon - to.lon) < 1e-4);
   state.from = { ...from, label: null };
-  state.to = dest ? { lat: dest.lat, lon: dest.lon, label: dest.name } : { ...to, label: null };
+  state.to = dest ? { lat: dest.lat, lon: dest.lon, label: dest.name, snapWays: dest.snapWays } : { ...to, label: null };
   state.activeTrip = null;
   state.via = [];
   renderTrips();
