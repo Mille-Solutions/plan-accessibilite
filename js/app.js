@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611151740';
-import { isOpen } from './hours.js?v=202611151740';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611151740';
+import { Router } from './router.js?v=202611160902';
+import { isOpen } from './hours.js?v=202611160902';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611160902';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -31,7 +31,12 @@ const state = {
   activeTrip: null, // id du trajet de référence sélectionné
   picking: null,    // 'from' | 'to' | null
   lastResult: null,
+  photos: new Map(),   // "node/123" → [{ src, thumb, caption, status }]
+  galleries: [],       // listes de photos ouvertes dans la visionneuse (index = data-gallery)
 };
+
+// ?verif=photos : affiche aussi les photos non validées et leur rapprochement sur la carte
+const VERIFY_PHOTOS = new URLSearchParams(location.search).get('verif') === 'photos';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -135,6 +140,72 @@ function photoUrl(p) {
   return null;
 }
 
+// ---------------------------------------------------------------- Photos (data/photos.json)
+function indexPhotos(db) {
+  state.photos = new Map();
+  for (const ph of db.photos || []) {
+    if (!ph.osm) continue;
+    if (ph.status !== 'ok' && !VERIFY_PHOTOS) continue; // seules les photos validées sont publiées
+    const list = state.photos.get(ph.osm) || [];
+    list.push({ src: ph.file, thumb: ph.thumb || ph.file, caption: ph.caption, status: ph.status });
+    state.photos.set(ph.osm, list);
+  }
+}
+
+/** Photos d'un ascenseur / d'une entrée, y compris celles d'un doublon de même nom à moins de 30 m. */
+function photosFor(osm, props) {
+  const list = [...(state.photos.get(osm) || [])];
+  const feature = state.pois?.features.find((f) => f.properties.osm === osm);
+  const name = props?.name ?? feature?.properties.name;
+  if (name && feature && feature.geometry.type === 'Point') {
+    const here = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+    for (const f of state.pois.features) {
+      const q = f.properties;
+      if (q.osm === osm || q.name !== name || f.geometry.type !== 'Point' || !state.photos.has(q.osm)) continue;
+      if (here.distanceTo([f.geometry.coordinates[1], f.geometry.coordinates[0]]) < 30) list.push(...state.photos.get(q.osm));
+    }
+  }
+  const osmPhoto = props && photoUrl(props);
+  if (osmPhoto) list.push({ src: osmPhoto, thumb: osmPhoto, caption: null, status: 'ok' });
+  return list;
+}
+
+function galleryHtml(photos, name, cls = 'gallery') {
+  if (!photos.length) return '';
+  const g = state.galleries.push({ photos, name }) - 1;
+  return `<div class="${cls}">${photos.map((ph, k) => {
+    const alt = loc(ph.caption) || t('photoOf', { name: name || t('elevator') });
+    return `<button type="button" class="gallery-item${ph.status !== 'ok' ? ' unverified' : ''}" data-gallery="${g}" data-index="${k}" aria-label="${esc(t('openPhoto'))} – ${esc(alt)}"><img src="${esc(ph.thumb)}" alt="" loading="lazy"></button>`;
+  }).join('')}</div>`;
+}
+
+function openViewer(g, k) {
+  const gallery = state.galleries[g];
+  if (!gallery) return;
+  const dlg = $('photo-viewer');
+  const show = (i) => {
+    const n = gallery.photos.length;
+    const idx = (i + n) % n;
+    const ph = gallery.photos[idx];
+    const alt = loc(ph.caption) || t('photoOf', { name: gallery.name || t('elevator') });
+    $('viewer-img').src = ph.src;
+    $('viewer-img').alt = alt;
+    $('viewer-caption').textContent = `${loc(ph.caption) || gallery.name || ''}${n > 1 ? ` (${idx + 1}/${n})` : ''}`;
+    $('viewer-prev').hidden = $('viewer-next').hidden = n < 2;
+    dlg.dataset.index = idx;
+  };
+  dlg.dataset.gallery = g;
+  show(k);
+  $('viewer-prev').onclick = () => show(Number(dlg.dataset.index) - 1);
+  $('viewer-next').onclick = () => show(Number(dlg.dataset.index) + 1);
+  if (!dlg.open) dlg.showModal();
+}
+
+document.addEventListener('click', (e) => {
+  const item = e.target.closest('.gallery-item');
+  if (item) openViewer(Number(item.dataset.gallery), Number(item.dataset.index));
+});
+
 function popupHtml(p) {
   const title = p.name || p.description || t(`cat_${p.category}`);
   const rows = [];
@@ -148,13 +219,13 @@ function popupHtml(p) {
   if (p['capacity:disabled']) rows.push([t('capacityDisabled'), esc(p['capacity:disabled'])]);
   if (p.category === 'elevator') rows.push([t('routable'), esc(p.routable ? t('yes') : t('no'))]);
   if (p.category === 'entrance') rows.push([t('stepFree'), esc(p.stepFree ? t('yes') : t('stepFreeNo'))]);
-  const photo = photoUrl(p);
+  const photos = photosFor(p.osm, p);
   return `<h4>${esc(title)}</h4>
     <div class="muted">${esc(t(`cat_${p.category}`))}</div>
     <dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
     ${p.category === 'elevator' && !p.routable ? `<p class="muted">${esc(t('notRoutable'))}</p>` : ''}
     ${p['wheelchair:description'] ? `<p>${esc(p['wheelchair:description'])}</p>` : ''}
-    ${photo ? `<img src="${esc(photo)}" alt="" loading="lazy">` : ''}
+    ${galleryHtml(photos, title)}
     <p><a href="https://www.openstreetmap.org/${esc(p.osm)}" target="_blank" rel="noopener">${esc(t('editOsm'))}</a></p>`;
 }
 
@@ -422,7 +493,8 @@ function renderResult(res, walk) {
   const steps = res.steps.map((s) => {
     const k = stops.indexOf(s);
     const num = k >= 0 ? `<span class="route-stop-num inline" aria-hidden="true">${k + 1}</span> ` : '';
-    return `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${num}${esc(stepText(s))}</li>`;
+    const pics = s.osm ? galleryHtml(photosFor(s.osm), s.name, 'gallery gallery-small') : '';
+    return `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${num}${esc(stepText(s))}${pics}</li>`;
   }).join('');
   box.innerHTML = `
     <div class="summary">
@@ -560,6 +632,32 @@ function bindUi() {
 }
 
 // ---------------------------------------------------------------- Démarrage
+/** ?verif=photos : position de chaque photo reliée à l'ascenseur proposé (vert = ok, orange = à vérifier). */
+async function showPhotoVerification() {
+  const db = await loadJson('data/photos.json').catch(() => ({ photos: [] }));
+  const layer = L.layerGroup().addTo(map);
+  let pending = 0;
+  for (const ph of db.photos) {
+    if (ph.status !== 'ok') pending++;
+    if (!ph.gps) continue;
+    const color = ph.status === 'ok' ? '#146c2e' : '#d97706';
+    const target = state.pois.features.find((f) => f.properties.osm === ph.osm);
+    if (target) {
+      const [x, y] = target.geometry.coordinates;
+      L.polyline([ph.gps, [y, x]], { color, weight: 3, dashArray: '4 6', className: 'route-line' }).addTo(layer);
+    }
+    L.circleMarker(ph.gps, { radius: 9, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 })
+      .bindPopup(() => `<h4>${esc(ph.source)}</h4>
+        <dl><dt>${esc(t('status'))}</dt><dd>${esc(ph.status)}</dd>
+        <dt>OSM</dt><dd>${esc(ph.name || '')} <a href="https://www.openstreetmap.org/${esc(ph.osm)}" target="_blank" rel="noopener">${esc(ph.osm || '—')}</a></dd>
+        ${ph.distance != null ? `<dt>${esc(t('distance'))}</dt><dd>${ph.distance} m</dd>` : ''}
+        ${ph.note ? `<dt>Note</dt><dd>${esc(ph.note)}</dd>` : ''}</dl>
+        ${galleryHtml([{ src: ph.file, thumb: ph.thumb, caption: ph.caption, status: ph.status }], ph.name)}`)
+      .addTo(layer);
+  }
+  $('status').textContent = t('photoVerifStatus', { n: db.photos.length, p: pending });
+}
+
 async function loadJson(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
@@ -578,11 +676,13 @@ async function init() {
     state.network = network;
     state.pois = pois;
     state.itineraries = itineraries;
+    indexPhotos(await loadJson('data/photos.json').catch(() => ({ photos: [] })));
     state.router = new Router(network);
     state.to = destinationPoint('ycm');
     buildLayers();
     refreshLanguage();
     $('status').textContent = '';
+    if (VERIFY_PHOTOS) showPhotoVerification();
   } catch (err) {
     console.error(err);
     $('status').textContent = t('loadError');

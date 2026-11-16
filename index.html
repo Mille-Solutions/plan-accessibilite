@@ -13,7 +13,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="css/style.css?v=202611151740">
+  <link rel="stylesheet" href="css/style.css?v=202611160902">
 </head>
 <body>
   <a class="skip-link" href="#panel" data-i18n="tabRoute">Itinéraire</a>
@@ -109,12 +109,24 @@
 
     <div id="map" class="map" role="region" data-i18n-aria="mapAria"></div>
     <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <dialog id="photo-viewer" class="viewer" aria-labelledby="viewer-caption">
+      <form method="dialog" class="viewer-close-form">
+        <button class="viewer-btn viewer-close" data-i18n-aria="close" aria-label="Fermer">✕</button>
+      </form>
+      <img id="viewer-img" alt="">
+      <div class="viewer-bar">
+        <button id="viewer-prev" class="viewer-btn" type="button" data-i18n-aria="prevPhoto" aria-label="Photo précédente">‹</button>
+        <p id="viewer-caption"></p>
+        <button id="viewer-next" class="viewer-btn" type="button" data-i18n-aria="nextPhoto" aria-label="Photo suivante">›</button>
+      </div>
+    </dialog>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
           integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
-  <script type="module" src="js/app.js?v=202611151740"></script>
+  <script type="module" src="js/app.js?v=202611160902"></script>
 </body>
 </html>

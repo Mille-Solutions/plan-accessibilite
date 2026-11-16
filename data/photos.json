@@ -1,0 +1,4 @@
+{
+  "_comment": "Généré par scripts/import-photos.mjs puis vérifié à la main. \"osm\" : ascenseur ou entrée de gare (ex. node/1870233769). \"status\" : ok | a-verifier | sans-gps. \"caption\" : légende facultative {fr, en}. Pour refaire le rapprochement d'une photo, supprimer son entrée et relancer le script.",
+  "photos": []
+}

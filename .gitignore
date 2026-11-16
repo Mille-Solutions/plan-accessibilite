@@ -1,3 +1,5 @@
 .DS_Store
 data/raw/
 node_modules/
+# Photos originales (avec position GPS) : seules les versions nettoyées de photos/web/ sont publiées
+photos/originaux/

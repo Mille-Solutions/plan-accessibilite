@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611151740';
-import { isOpen } from './hours.js?v=202611151740';
+import { FLAGS, haversine } from './network-builder.js?v=202611160902';
+import { isOpen } from './hours.js?v=202611160902';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -269,10 +269,11 @@ export class Router {
         (last.type === 'elevator' || (last.type === 'walk' && last.distance < 15))) return;
     const open = isOpen(info.opening_hours, opt.date);
     const lat = this.lat(node), lon = this.lon(node);
-    result.elevators.push({ key, id: info.id, name: info.name, opening_hours: info.opening_hours, open, wheelchair: info.wheelchair, level: info.level, lat, lon });
+    const osm = `${info.way ? 'way' : 'node'}/${info.id}`;
+    result.elevators.push({ key, osm, id: info.id, name: info.name, opening_hours: info.opening_hours, open, wheelchair: info.wheelchair, level: info.level, lat, lon });
     if (!info.opening_hours) result.warnings.add('elevator-hours-unknown');
     else if (open === null) result.warnings.add('elevator-hours-unparsed');
-    result.steps.push({ type: 'elevator', name: info.name, opening_hours: info.opening_hours, open, level: info.level, lat, lon });
+    result.steps.push({ type: 'elevator', osm, name: info.name, opening_hours: info.opening_hours, open, level: info.level, lat, lon });
   }
 
   _noteViaElevator(node, opt, result) {
@@ -287,7 +288,7 @@ export class Router {
     found.path.forEach((i, idx) => {
       if (this.net.elevators[i] && idx > 0 && idx < found.path.length - 1) addElevator(`n${i}`, this.net.elevators[i], i);
       if (entrances[i] && !result.steps.some((s) => s.key === `e${i}`)) {
-        result.steps.push({ type: 'entrance', key: `e${i}`, name: entrances[i].name, lat: this.lat(i), lon: this.lon(i) });
+        result.steps.push({ type: 'entrance', key: `e${i}`, osm: `node/${entrances[i].id}`, name: entrances[i].name, lat: this.lat(i), lon: this.lon(i) });
       }
       const e = found.pathEdges[idx];
       if (e === undefined) return;
@@ -296,7 +297,7 @@ export class Router {
       const f = E[5 * e + 3];
       const way = this.net.ways[E[5 * e + 4]];
       dist += len;
-      if (f & FLAGS.ELEVATOR) { addElevator(`w${E[5 * e + 4]}`, this.net.elevators[`w${E[5 * e + 4]}`] || { id: way.id }, i); return; }
+      if (f & FLAGS.ELEVATOR) { addElevator(`w${E[5 * e + 4]}`, this.net.elevators[`w${E[5 * e + 4]}`] || { id: way.id, way: true }, i); return; }
       if (f & FLAGS.STEEP) result.warnings.add('steep');
       if (f & FLAGS.NO_SIDEWALK) result.warnings.add('no-sidewalk');
       if (f & FLAGS.ROUGH) result.warnings.add('rough');

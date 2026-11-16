@@ -86,13 +86,47 @@ Le script interroge l'API Overpass sur la zone Monaco + Beausoleil et régénèr
 `--from-cache` reconstruit ces fichiers à partir de la dernière réponse brute (`data/raw/`, non versionné).
 Après une correction dans OpenStreetMap, relancer le script pour en profiter.
 
+## Photos des ascenseurs et des entrées
+
+Les photos aident à repérer un ascenseur depuis la rue. Elles s'affichent dans la fiche de l'ascenseur
+et, en miniature, dans la feuille de route (touchez une photo pour l'agrandir).
+
+1. Déposer les photos (JPEG, HEIC de l'iPhone, PNG) dans `photos/originaux/`. Ce dossier n'est **pas**
+   publié : les originaux contiennent la position GPS et le modèle du téléphone.
+2. Lancer l'import (macOS, utilise `sips`) :
+   ```bash
+   node scripts/import-photos.mjs
+   ```
+   Pour chaque nouvelle photo, le script lit la position GPS, propose l'ascenseur ou l'entrée de gare
+   le plus proche, crée dans `photos/web/` une version 1600 px et une miniature 600 px **redressées et
+   sans métadonnées**, et ajoute une entrée dans [`data/photos.json`](data/photos.json).
+3. Vérifier les cas signalés `a-verifier` (plus de 30 m d'écart, ou un autre ascenseur à moins de 10 m
+   près) ou `sans-gps` : ouvrir la carte avec `?verif=photos`
+   (<http://localhost:8765/?verif=photos>) pour voir chaque photo reliée à l'ascenseur proposé, corriger
+   `"osm"` dans `data/photos.json` si besoin, puis passer `"status"` à `"ok"`. **Seules les photos `ok`
+   sont affichées au public.**
+4. Facultatif : ajouter une légende (`"caption": {"fr": "…", "en": "…"}`), par exemple
+   « Entrée côté boulevard de Belgique, à droite de la pharmacie ».
+
+Le GPS d'un téléphone est souvent décalé de 10 à 30 m entre les immeubles, et il n'y a pas de signal en
+sous-sol. Pour forcer le rapprochement, mettez l'identifiant OSM dans le nom du fichier
+(`1870233769-porte.jpg`) : il figure dans le lien « Voir / corriger sur OpenStreetMap » de la fiche.
+
+Le script ne modifie jamais une entrée existante (vos corrections sont conservées). Pour refaire le
+rapprochement d'une photo, supprimez son entrée et relancez. Une photo retirée de `photos/originaux/`
+est retirée de `data/photos.json` et de `photos/web/`.
+
+Conseils de prise de vue : 2 ou 3 photos par ascenseur (l'accès vu de la rue avec un repère, la porte,
+éventuellement les boutons), localisation activée pour l'appareil photo, et pas de personnes
+reconnaissables.
+
 ## Tests
 
 ```bash
 node --test tests/
 ```
 
-Vérifie que les trajets de référence existent, n'empruntent aucun escalier, que le trajet 1 passe bien
+Vérifie l'import des photos (lecture GPS, nettoyage des métadonnées, redressement, rapprochement), que les trajets de référence existent, n'empruntent aucun escalier, que le trajet 1 passe bien
 par les deux ascenseurs de la gare, et l'interprétation des horaires d'ouverture.
 
 ## Limites connues
