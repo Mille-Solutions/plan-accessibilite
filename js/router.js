@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611161322';
-import { isOpen } from './hours.js?v=202611161322';
+import { FLAGS, haversine } from './network-builder.js?v=202611161326';
+import { isOpen } from './hours.js?v=202611161326';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -58,6 +58,7 @@ export class Router {
    */
   constructor(network, corrections = null) {
     this.net = network;
+    if (corrections?.addLinks?.length) this._addLinks(corrections.addLinks);
     const excluded = new Set((corrections?.excludeWays || []).map((x) => Number(String(x.osm ?? x).replace('way/', ''))));
     if (excluded.size) {
       for (let e = 0; e < network.edges.length / 5; e++) {
@@ -86,6 +87,37 @@ export class Router {
       let arr = this.grid.get(key);
       if (!arr) this.grid.set(key, (arr = []));
       arr.push(i);
+    }
+  }
+
+  /**
+   * Ajoute des liaisons absentes d'OpenStreetMap (ex. galerie qui rejoint un ascenseur) entre deux nœuds
+   * existants, désignés par leurs coordonnées ({lat, lon}) ou par un ascenseur OSM ({elevator: id}).
+   */
+  _addLinks(links) {
+    const net = this.net;
+    const n = net.nodes.length / 2;
+    const findNode = (p) => {
+      if (p.elevator !== undefined) {
+        const k = Object.keys(net.elevators).find((key) => net.elevators[key].id === p.elevator && !net.elevators[key].way);
+        return k === undefined ? -1 : Number(k);
+      }
+      let best = -1, bestD = 2; // m
+      for (let i = 0; i < n; i++) {
+        if (Math.abs(net.nodes[2 * i] - p.lat) > 0.0001 || Math.abs(net.nodes[2 * i + 1] - p.lon) > 0.0001) continue;
+        const d = haversine(p.lat, p.lon, net.nodes[2 * i], net.nodes[2 * i + 1]);
+        if (d < bestD) { best = i; bestD = d; }
+      }
+      return best;
+    };
+    this.linkErrors = [];
+    for (const link of links) {
+      const a = findNode(link.from), b = findNode(link.to);
+      if (a < 0 || b < 0) { this.linkErrors.push(link); continue; }
+      const len = haversine(net.nodes[2 * a], net.nodes[2 * a + 1], net.nodes[2 * b], net.nodes[2 * b + 1]);
+      const wayIdx = net.ways.length;
+      net.ways.push({ id: -(wayIdx + 1), name: link.name || null, highway: link.highway || 'footway', correction: true });
+      net.edges.push(a, b, Math.max(1, Math.round(len * 10)), 0, wayIdx);
     }
   }
 

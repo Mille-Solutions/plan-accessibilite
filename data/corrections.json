@@ -1,5 +1,5 @@
 {
-  "_comment": "Corrections locales des données OpenStreetMap, issues du terrain. excludeWays : voies OSM que le calcul d'itinéraire ne doit jamais emprunter (accès réservé, passage impraticable…), avec la raison et la date du constat. Penser aussi à corriger OpenStreetMap quand c'est possible.",
+  "_comment": "Corrections locales des données OpenStreetMap, issues du terrain. excludeWays : voies OSM que le calcul d'itinéraire ne doit jamais emprunter (accès réservé, passage impraticable…). addLinks : liaisons sans marches qui existent sur place mais manquent dans OSM, entre deux points du réseau (coordonnées d'un nœud OSM, ou {\"elevator\": id OSM}). Chaque correction indique sa raison et la date du constat. Penser aussi à corriger OpenStreetMap quand c'est possible.",
   "excludeWays": [
     {
       "osm": "way/203711529",
@@ -11,6 +11,22 @@
       "osm": "way/585654708",
       "name": "Passage entre l'ascenseur « Yacht Club » et le quai",
       "reason": "Accès au club par le niveau du quai réservé au personnel.",
+      "date": "2026-11-16"
+    }
+  ],
+  "addLinks": [
+    {
+      "name": "Galerie du CCAM",
+      "from": {
+        "lat": 43.7377131,
+        "lon": 7.4281177,
+        "_osm": "node/6951209844, extrémité de la galerie way/742495236 sous l'ascenseur « Louis II / CCAM »"
+      },
+      "to": {
+        "elevator": 4472516569,
+        "_osm": "ascenseur « CCAM - MH » node/4472516569"
+      },
+      "reason": "Depuis le côté Casino, le public prend l'ascenseur « Louis II / CCAM », suit la galerie jusqu'à l'ascenseur « CCAM - MH », puis monte au Yacht Club. Dans OSM, la galerie s'arrête à 15 m de cet ascenseur sans le rejoindre.",
       "date": "2026-11-16"
     }
   ]

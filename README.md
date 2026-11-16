@@ -85,6 +85,8 @@ Pour une autre destination, l'ajouter dans `destinations` et y faire référence
 [`data/corrections.json`](data/corrections.json) liste les voies OSM que le calcul ne doit jamais emprunter
 (accès réservé, passage impraticable), avec la raison et la date du constat. Exemple : l'accès au Yacht Club
 par le Quai Louis II, réservé au personnel ; le public entre par le haut, via l'ascenseur « CCAM - MH ».
+`addLinks` ajoute les liaisons qui existent sur place mais manquent dans OSM (ex. la galerie entre les ascenseurs
+« Louis II / CCAM » et « CCAM - MH »).
 Ces corrections s'appliquent au chargement de la carte, sans relancer la collecte OSM.
 
 ## Mettre à jour les données OpenStreetMap

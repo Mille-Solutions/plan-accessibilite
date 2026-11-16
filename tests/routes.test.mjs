@@ -97,3 +97,12 @@ test('rues superposées : avenue d\'Ostende au-dessus de l\'avenue J.-F. Kennedy
   // un point sans ambiguïté ne déclenche pas de question
   assert.deepEqual(router.levelChoices(43.74269, 7.42564), []);
 });
+
+test('côté Casino : ascenseur « Louis II / CCAM », galerie puis ascenseur « CCAM - MH »', () => {
+  assert.equal(router.linkErrors.length, 0, 'une liaison de data/corrections.json ne correspond à aucun nœud');
+  const casino = router.route({ from: { lat: 43.7395, lon: 7.4283 }, to: destinations.ycm, options: { date: MONDAY_10H } });
+  assert.ok(casino.ok);
+  const names = casino.elevators.map((e) => e.name);
+  assert.deepEqual(names.slice(-2), ['Louis II / CCAM', 'CCAM - MH']);
+  assert.ok(casino.steps.some((s) => s.name === 'Galerie du CCAM'));
+});
