@@ -5,6 +5,9 @@ de Monaco et Beausoleil, et calcule des itinéraires **sans escaliers** vers le 
 
 Première version, construite à partir du plan « Carte d'accessibilité PMR – Monaco ».
 
+**Version en ligne (HTTPS) : https://mille-solutions.github.io/plan-accessibilite/** — mise à jour
+automatiquement par GitHub Pages à chaque push sur `main`.
+
 ## Guides
 
 - [Mise en ligne HTTPS](docs/mise-en-ligne-https.md) : modes d'intégration au site du Yacht Club, géolocalisation, réglages iPhone.

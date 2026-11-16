@@ -4,6 +4,12 @@ Mis à jour le 16 novembre 2026
 
 Ce guide explique comment mettre en ligne la carte PMR du Navicap Challenge en HTTPS pour que le bouton « Ma position » fonctionne. Le code est dans le dépôt [Mille-Solutions/plan-accessibilite](https://github.com/Mille-Solutions/plan-accessibilite) ; l'ajout des photos d'ascenseurs fait l'objet d'un guide séparé, [Photos des ascenseurs](photos-ascenseurs.md).
 
+## Version de test en ligne
+
+La carte est publiée en HTTPS par GitHub Pages : **https://mille-solutions.github.io/plan-accessibilite/**. Chaque `git push` sur la branche `main` met le site à jour en 1 à 2 minutes. Le dépôt est public depuis le 16 novembre 2026, condition pour utiliser GitHub Pages gratuitement. Le réglage se trouve dans Settings → Pages du dépôt (source : branche `main`, dossier `/ (root)`).
+
+Exemple de lien direct vers un trajet : https://mille-solutions.github.io/plan-accessibilite/?trajet=belgique-gare
+
 ## Mise en ligne en HTTPS et géolocalisation
 
 En HTTPS, la géolocalisation fonctionne sans rien modifier dans la carte. Les navigateurs ne donnent la position qu'aux sites sécurisés : sur le réseau local (http://192.168.1.64:8765), le bouton « Ma position » ne marche donc pas, mais tout le reste fonctionne. Au premier clic, le téléphone demande à la personne d'autoriser sa localisation.
@@ -13,13 +19,13 @@ Les en-têtes de sécurité du site du Yacht Club (vérifiés le 15 novembre 202
 | Mode d'intégration | Ce qu'il faut faire | Géolocalisation |
 | --- | --- | --- |
 | Carte copiée sur le serveur du Yacht Club (ex. `/navicap/carte/`) | Copier tout le dossier, y compris `data/` et `photos/web/`. Recommandé : compression activée sur le serveur (`network.json` pèse 1 Mo). | Fonctionne telle quelle |
-| Carte hébergée ailleurs (ex. GitHub Pages) et affichée dans une page du club via une iframe | Le club ajoute `allow="geolocation"` à l'iframe (code ci-dessous). | Bloquée sans cet attribut |
-| Simple lien vers la carte hébergée ailleurs en HTTPS | Rien | Fonctionne telle quelle |
+| Carte hébergée sur GitHub Pages (adresse ci-dessus) et affichée dans une page du club via une iframe | Le club ajoute `allow="geolocation"` à l'iframe (code ci-dessous). | Bloquée sans cet attribut |
+| Simple lien vers https://mille-solutions.github.io/plan-accessibilite/ | Rien | Fonctionne telle quelle |
 
 Code d'intégration en iframe, à coller dans la page du Yacht Club :
 
 ```html
-<iframe src="https://…/plan-accessibilite/" allow="geolocation" style="width:100%;height:80vh;border:0"></iframe>
+<iframe src="https://mille-solutions.github.io/plan-accessibilite/" allow="geolocation" style="width:100%;height:80vh;border:0"></iframe>
 ```
 
 Le lien simple est le plus robuste sur mobile : la carte s'ouvre en plein écran.

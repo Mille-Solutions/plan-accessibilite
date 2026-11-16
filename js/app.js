@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611160917';
-import { isOpen } from './hours.js?v=202611160917';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611160917';
+import { Router } from './router.js?v=202611161128';
+import { isOpen } from './hours.js?v=202611161128';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161128';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
