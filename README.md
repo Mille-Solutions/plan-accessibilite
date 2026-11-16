@@ -80,6 +80,13 @@ dans l'application avec « Mon trajet », puis cliquer sur **Copier pour itinera
 
 Pour une autre destination, l'ajouter dans `destinations` et y faire référence par sa clé dans `to`.
 
+## Corrections issues du terrain
+
+[`data/corrections.json`](data/corrections.json) liste les voies OSM que le calcul ne doit jamais emprunter
+(accès réservé, passage impraticable), avec la raison et la date du constat. Exemple : l'accès au Yacht Club
+par le Quai Louis II, réservé au personnel ; le public entre par le haut, via l'ascenseur « CCAM - MH ».
+Ces corrections s'appliquent au chargement de la carte, sans relancer la collecte OSM.
+
 ## Mettre à jour les données OpenStreetMap
 
 ```bash

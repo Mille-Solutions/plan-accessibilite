@@ -6,12 +6,12 @@
         "fr": "Yacht Club de Monaco",
         "en": "Yacht Club de Monaco"
       },
-      "lat": 43.73748,
-      "lon": 7.42845,
+      "lat": 43.73775,
+      "lon": 7.4285,
       "snapWays": [
-        203711529
+        432758052
       ],
-      "_comment": "Le Yacht Club s'atteint par le Quai Louis II (niveau du port) : l'arrivée est rattachée à cette voie OSM pour ne pas aboutir sur l'avenue d'Ostende ou le boulevard Louis II, situés plus haut."
+      "_comment": "Le public entre au Yacht Club par le haut : passerelle de niveau 1 (voie OSM 432758052), atteinte par l'ascenseur « CCAM - MH » depuis le boulevard Louis II. L'accès par le Quai Louis II est réservé au personnel (voir data/corrections.json)."
     }
   },
   "itineraries": [

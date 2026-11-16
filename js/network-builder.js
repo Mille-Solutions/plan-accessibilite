@@ -21,6 +21,7 @@ export const FLAGS = {
   WHEELCHAIR_YES: 256,
   ROUGH: 512,       // revêtement difficile (pavés, gravier…)
   WHEELCHAIR_LIMITED: 1024,
+  EXCLUDED: 2048,   // fermé au public d'après data/corrections.json (appliqué au chargement)
 };
 
 const ROAD_TYPES = new Set([

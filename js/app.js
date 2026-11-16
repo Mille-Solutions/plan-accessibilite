@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611161200';
-import { isOpen } from './hours.js?v=202611161200';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161200';
+import { Router } from './router.js?v=202611161322';
+import { isOpen } from './hours.js?v=202611161322';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161322';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -860,11 +860,12 @@ async function init() {
     const [network, pois, itineraries] = await Promise.all([
       loadJson('data/network.json'), loadJson('data/pois.geojson'), loadJson('data/itineraries.json'),
     ]);
+    const corrections = await loadJson('data/corrections.json').catch(() => null);
     state.network = network;
     state.pois = pois;
     state.itineraries = itineraries;
     indexPhotos(await loadJson('data/photos.json').catch(() => ({ photos: [] })));
-    state.router = new Router(network);
+    state.router = new Router(network, corrections);
     state.to = destinationPoint('ycm');
     buildLayers();
     refreshLanguage();

@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611161200';
-import { isOpen } from './hours.js?v=202611161200';
+import { FLAGS, haversine } from './network-builder.js?v=202611161322';
+import { isOpen } from './hours.js?v=202611161322';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -52,8 +52,18 @@ class MinHeap {
 }
 
 export class Router {
-  constructor(network) {
+  /**
+   * @param network  graphe de data/network.json
+   * @param corrections  contenu de data/corrections.json (facultatif) : voies à ne jamais emprunter
+   */
+  constructor(network, corrections = null) {
     this.net = network;
+    const excluded = new Set((corrections?.excludeWays || []).map((x) => Number(String(x.osm ?? x).replace('way/', ''))));
+    if (excluded.size) {
+      for (let e = 0; e < network.edges.length / 5; e++) {
+        if (excluded.has(network.ways[network.edges[5 * e + 4]].id)) network.edges[5 * e + 3] |= FLAGS.EXCLUDED;
+      }
+    }
     const n = network.nodes.length / 2;
     const m = network.edges.length / 5;
     this.nodeCount = n;
@@ -91,6 +101,7 @@ export class Router {
     const E = this.net.edges;
     const len = E[5 * e + 2] / 10;
     const f = E[5 * e + 3];
+    if (f & FLAGS.EXCLUDED) return Infinity;
     if (opt.wheelchair) {
       if (f & (FLAGS.STEPS | FLAGS.ESCALATOR | FLAGS.WHEELCHAIR_NO)) return Infinity;
       if (opt.avoidSteep && (f & FLAGS.VERY_STEEP)) return Infinity;

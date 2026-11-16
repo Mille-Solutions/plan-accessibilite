@@ -9,7 +9,8 @@ import { isOpen } from '../js/hours.js';
 const read = (p) => JSON.parse(readFileSync(new URL(`../${p}`, import.meta.url)));
 const network = read('data/network.json');
 const { itineraries, destinations } = read('data/itineraries.json');
-const router = new Router(network);
+const corrections = read('data/corrections.json');
+const router = new Router(network, corrections);
 const MONDAY_10H = new Date('2026-11-16T10:00:00');
 
 for (const it of itineraries) {
@@ -30,9 +31,10 @@ test('le trajet 1 traverse la gare par la galerie Sainte-Dévote, sans détour',
   const res = router.route({ from: it.from, via: it.via, to: destinations[it.to], options: { date: MONDAY_10H } });
   assert.ok(res.ok);
   assert.ok(res.elevators.some((e) => e.name === 'Saint Dévote / Belgique'), 'ascenseur Sainte-Dévote / Belgique absent');
-  assert.equal(res.elevators.length, 1, 'ascenseur compté en double');
+  assert.equal(res.elevators.filter((e) => e.name === 'Saint Dévote / Belgique').length, 1, 'ascenseur compté en double');
   assert.ok(res.steps.some((s) => s.type === 'entrance' && s.name === 'Port Hercule'), 'sortie Port Hercule absente');
   assert.ok(res.steps.some((s) => s.name === 'Galerie Sainte-Dévote'), 'galerie Sainte-Dévote absente');
+  assert.ok(res.elevators.some((e) => e.name === 'CCAM - MH'), 'ascenseur CCAM - MH absent');
   // ~950 m depuis que l'arrivée se fait au niveau du quai (761 m quand elle aboutissait, à tort, sur le trottoir du boulevard)
   assert.ok(res.distance < 1100, `trajet trop long : ${res.distance} m`);
 });
@@ -70,15 +72,19 @@ test('horaires des ascenseurs', () => {
   assert.equal(isOpen(null, MONDAY_10H), null);
 });
 
-test('l\'arrivée au Yacht Club se fait par le Quai Louis II (niveau du port)', () => {
-  // Avant correction, l'arrivée se rattachait au trottoir du boulevard Louis II, une dizaine de mètres plus haut.
-  const QUAI_LOUIS_II = 203711529;
+test('l\'arrivée au Yacht Club se fait par le haut (passerelle, ascenseur CCAM - MH), pas par le quai réservé au personnel', () => {
+  const PASSERELLE = 432758052;
+  const STAFF = new Set(corrections.excludeWays.map((x) => Number(x.osm.replace('way/', ''))));
   for (const from of [{ lat: 43.73705, lon: 7.4232 }, ...itineraries.map((it) => it.from)]) {
     const res = router.route({ from, to: destinations.ycm, options: { date: MONDAY_10H } });
-    assert.ok(res.ok);
-    const lastEdge = res.pathEdges[res.pathEdges.length - 1];
-    assert.equal(network.ways[network.edges[5 * lastEdge + 4]].id, QUAI_LOUIS_II, `arrivée hors du quai depuis ${JSON.stringify(from)}`);
+    assert.ok(res.ok, `pas d'itinéraire depuis ${JSON.stringify(from)}`);
+    const wayOf = (e) => network.ways[network.edges[5 * e + 4]].id;
+    assert.equal(wayOf(res.pathEdges[res.pathEdges.length - 1]), PASSERELLE, `arrivée hors de la passerelle depuis ${JSON.stringify(from)}`);
+    assert.ok(!res.pathEdges.some((e) => STAFF.has(wayOf(e))), 'le trajet emprunte un accès réservé au personnel');
   }
+  // depuis l'avenue J.-F. Kennedy (Miramar), il faut l'ascenseur CCAM - MH
+  const miramar = router.route({ from: { lat: 43.73705, lon: 7.4232 }, to: destinations.ycm, options: { date: MONDAY_10H } });
+  assert.ok(miramar.elevators.some((e) => e.name === 'CCAM - MH'));
 });
 
 test('rues superposées : avenue d\'Ostende au-dessus de l\'avenue J.-F. Kennedy', () => {

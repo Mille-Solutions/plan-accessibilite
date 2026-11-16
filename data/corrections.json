@@ -1,0 +1,17 @@
+{
+  "_comment": "Corrections locales des données OpenStreetMap, issues du terrain. excludeWays : voies OSM que le calcul d'itinéraire ne doit jamais emprunter (accès réservé, passage impraticable…), avec la raison et la date du constat. Penser aussi à corriger OpenStreetMap quand c'est possible.",
+  "excludeWays": [
+    {
+      "osm": "way/203711529",
+      "name": "Quai Louis II",
+      "reason": "Accès au Yacht Club par le quai réservé au personnel du club ; le public entre par le haut (ascenseur CCAM - MH).",
+      "date": "2026-11-16"
+    },
+    {
+      "osm": "way/585654708",
+      "name": "Passage entre l'ascenseur « Yacht Club » et le quai",
+      "reason": "Accès au club par le niveau du quai réservé au personnel.",
+      "date": "2026-11-16"
+    }
+  ]
+}
