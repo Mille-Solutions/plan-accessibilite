@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611160902';
-import { isOpen } from './hours.js?v=202611160902';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611160902';
+import { Router } from './router.js?v=202611160917';
+import { isOpen } from './hours.js?v=202611160917';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611160917';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -47,7 +47,7 @@ function recall(key) { try { return localStorage.getItem(key); } catch { return 
 // ---------------------------------------------------------------- Carte
 const MAX_ZOOM = 21; // au-delà de 19, les tuiles OSM sont agrandies : utile pour séparer les marqueurs proches
 const map = L.map('map', { zoomControl: true, minZoom: 13, maxZoom: MAX_ZOOM }).setView(CENTER, 15);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: MAX_ZOOM,
   maxNativeZoom: 19,
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -341,12 +341,12 @@ function renderEndpoints() {
   $('to-value').textContent = pointLabel(state.to);
   markerLayer.clearLayers();
   if (state.from) {
-    L.marker([state.from.lat, state.from.lon], { icon: pinIcon('pin-a', 'A'), draggable: true, title: t('startMarker'), zIndexOffset: 1000 })
+    L.marker([state.from.lat, state.from.lon], { icon: pinIcon('pin-a', 'A'), draggable: true, title: t('startMarker'), zIndexOffset: 3000 })
       .on('dragend', (e) => { const ll = e.target.getLatLng(); setPoint('from', ll.lat, ll.lng); })
       .addTo(markerLayer);
   }
   if (state.to) {
-    L.marker([state.to.lat, state.to.lon], { icon: pinIcon('pin-b', 'B'), draggable: true, title: t('endMarker'), zIndexOffset: 1000 })
+    L.marker([state.to.lat, state.to.lon], { icon: pinIcon('pin-b', 'B'), draggable: true, title: t('endMarker'), zIndexOffset: 3000 })
       .on('dragend', (e) => { const ll = e.target.getLatLng(); setPoint('to', ll.lat, ll.lng); })
       .addTo(markerLayer);
   }
@@ -462,9 +462,10 @@ function drawRoute(res, walk) {
 }
 
 function stepText(s) {
-  if (s.type === 'entrance') return `${t('stationEntrance')}${s.name ? ` «\u00a0${s.name}\u00a0»` : ''}`;
+  const quote = (n) => (getLang() === 'fr' ? ` «\u00a0${n}\u00a0»` : ` “${n}”`);
+  if (s.type === 'entrance') return `${t('stationEntrance')}${s.name ? quote(s.name) : ''}`;
   if (s.type === 'elevator') {
-    const name = s.name ? ` «\u00a0${s.name}\u00a0»` : '';
+    const name = s.name ? quote(s.name) : '';
     return `${t('takeElevator')}${name}`;
   }
   const isPath = ['footway', 'pedestrian', 'path', 'corridor', 'platform', 'crossing'].includes(s.highway);
@@ -505,9 +506,126 @@ function renderResult(res, walk) {
     <h4>${esc(t('elevatorsUsed'))}</h4>${elev}
     <h4>${esc(t('warnings'))}</h4><ul class="warn-list">${warns.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
     <details><summary><strong>${esc(t('steps'))}</strong></summary><ol class="step-list">${steps}</ol></details>
-    ${state.activeTrip ? '' : `<p><button id="copy-json" class="btn btn-small" type="button">${esc(t('copyJson'))}</button></p>`}`;
+    <div class="result-actions">
+      <button id="print-btn" class="btn btn-primary" type="button">${esc(t('printPdf'))}</button>
+      ${state.activeTrip ? '' : `<button id="copy-json" class="btn btn-small" type="button">${esc(t('copyJson'))}</button>`}
+    </div>
+    <p class="hint">${esc(t('printHint'))}</p>`;
   $('copy-json')?.addEventListener('click', copyItinerary);
+  $('print-btn').addEventListener('click', printRoute);
 }
+
+// ---------------------------------------------------------------- Impression / export PDF
+/** Lien qui rouvre ce trajet : ?trajet=<id> pour un trajet de référence, sinon ?de=lat,lon&a=lat,lon. */
+function tripUrl() {
+  const url = new URL(location.pathname, location.origin);
+  const r5 = (x) => x.toFixed(5);
+  if (state.activeTrip) url.searchParams.set('trajet', state.activeTrip);
+  else {
+    url.searchParams.set('de', `${r5(state.from.lat)},${r5(state.from.lon)}`);
+    url.searchParams.set('a', `${r5(state.to.lat)},${r5(state.to.lon)}`);
+  }
+  if (getLang() !== 'fr') url.searchParams.set('lang', getLang());
+  return url.toString();
+}
+
+function qrSvg(text) {
+  if (typeof qrcode !== 'function') return '';
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
+}
+
+function fmtDateTime(d) {
+  return d.toLocaleString(getLang(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
+function buildPrintSheet(res) {
+  const trip = state.itineraries.itineraries.find((x) => x.id === state.activeTrip);
+  const opt = options();
+  const minutes = Math.max(1, Math.round(res.distance / WHEELCHAIR_SPEED + res.elevators.length * ELEVATOR_TIME));
+  const optionText = [t('printStepFree'), opt.avoidSteep ? t('avoidSteep') : null, opt.respectHours ? t('respectHours') : null]
+    .filter(Boolean).join(' · ');
+  $('print-head').innerHTML = `
+    <p class="print-eyebrow">${esc(t('eventName'))} · ${esc(t('title'))}</p>
+    <h1>${esc(trip ? loc(trip.name) : t('customTrip'))}</h1>
+    <p class="print-route"><span class="pin pin-a">A</span> ${esc(pointLabel(state.from))}
+      <span aria-hidden="true">→</span> <span class="pin pin-b">B</span> ${esc(pointLabel(state.to))}</p>
+    <div class="print-summary">
+      <div><span class="k">${esc(t('distance'))}</span><span class="v">${esc(fmtDist(res.distance))}</span></div>
+      <div><span class="k">${esc(t('duration'))}</span><span class="v">${esc(t('minutes', { n: minutes }))}</span></div>
+      <div><span class="k">${esc(t('elevatorsUsed'))}</span><span class="v">${res.elevators.length}</span></div>
+      <div><span class="k">${esc(t('departure'))}</span><span class="v small">${esc(fmtDateTime(opt.date))}</span></div>
+    </div>
+    <p class="print-options">${esc(optionText)}</p>`;
+
+  const stops = routeStops(res);
+  const steps = res.steps.map((s) => {
+    const k = stops.indexOf(s);
+    const num = k >= 0 ? `<span class="route-stop-num inline">${k + 1}</span> ` : '';
+    let extra = '';
+    if (s.type === 'elevator') {
+      const lab = s.open === true ? t('open') : s.open === false ? t('closed') : t('hoursUnknown');
+      extra = `<div class="print-step-info">${s.level ? `${esc(t('level'))} ${esc(s.level)} · ` : ''}${esc(t('hours'))} : ${esc(s.opening_hours || lab)}</div>`;
+    }
+    const pics = s.osm ? photosFor(s.osm).slice(0, 2) : [];
+    const picHtml = pics.length
+      ? `<div class="print-photos">${pics.map((ph) => `<figure><img src="${esc(ph.thumb)}" alt="">${loc(ph.caption) ? `<figcaption>${esc(loc(ph.caption))}</figcaption>` : ''}</figure>`).join('')}</div>`
+      : '';
+    return `<li class="${s.type === 'walk' ? '' : 'print-stop'}">${num}${esc(stepText(s))}${extra}${picHtml}</li>`;
+  }).join('');
+  const warns = [...res.warnings.map((w) => t(`warn_${w}`)), t('warnData')];
+  const url = tripUrl();
+  $('print-sheet').innerHTML = `
+    <h2>${esc(t('steps'))}</h2>
+    <ol class="print-steps">${steps}</ol>
+    <h2>${esc(t('warnings'))}</h2>
+    <ul class="print-warnings">${warns.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
+    <footer class="print-footer">
+      <div class="print-qr">${qrSvg(url)}</div>
+      <div>
+        <p><strong>${esc(t('printOnline'))}</strong><br><span class="print-url">${esc(url)}</span></p>
+        <p>${esc(t('printFooter', { d: new Date().toLocaleDateString(getLang()), osm: state.network ? new Date(state.network.generated).toLocaleDateString(getLang()) : '' }))}</p>
+      </div>
+    </footer>`;
+}
+
+function waitForTiles(timeout) {
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(timer); tiles.off('load', done); resolve(); };
+    const timer = setTimeout(done, timeout);
+    tiles.on('load', done);
+  });
+}
+
+function preparePrint() {
+  if (!state.lastResult?.ok) return false;
+  buildPrintSheet(state.lastResult);
+  document.body.classList.add('printing');
+  map.invalidateSize({ pan: false });
+  map.fitBounds(L.latLngBounds(state.lastResult.coords), { padding: [30, 30], maxZoom: 18, animate: false });
+  return true;
+}
+
+async function printRoute() {
+  if (!preparePrint()) return;
+  $('status').textContent = t('printPreparing');
+  await waitForTiles(3000);
+  $('status').textContent = '';
+  window.print();
+}
+
+function endPrint() {
+  if (!document.body.classList.contains('printing')) return;
+  document.body.classList.remove('printing');
+  map.invalidateSize({ pan: false });
+  if (state.lastResult?.ok) map.fitBounds(L.latLngBounds(state.lastResult.coords), { padding: [40, 40], maxZoom: 18, animate: false });
+}
+
+// Impression lancée depuis le menu du navigateur (Ctrl/Cmd + P) : même mise en page
+window.addEventListener('beforeprint', () => { if (!document.body.classList.contains('printing')) preparePrint(); });
+window.addEventListener('afterprint', endPrint);
 
 function copyItinerary() {
   const round = (x) => +x.toFixed(5);
@@ -664,8 +782,32 @@ async function loadJson(url) {
   return res.json();
 }
 
+/** Liens directs : ?trajet=<id> ou ?de=lat,lon&a=lat,lon (ex. depuis le QR code d'une fiche imprimée). */
+function openFromUrl() {
+  const q = new URLSearchParams(location.search);
+  const trip = state.itineraries.itineraries.find((x) => x.id === q.get('trajet'));
+  if (trip) { selectTrip(trip); return; }
+  const parse = (v) => {
+    const m = (v || '').match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+    return m ? { lat: Number(m[1]), lon: Number(m[2]) } : null;
+  };
+  const from = parse(q.get('de'));
+  if (!from) return;
+  const to = parse(q.get('a')) || destinationPoint('ycm');
+  const dest = Object.values(state.itineraries.destinations)
+    .find((d) => Math.abs(d.lat - to.lat) < 1e-4 && Math.abs(d.lon - to.lon) < 1e-4);
+  state.from = { ...from, label: null };
+  state.to = dest ? { lat: dest.lat, lon: dest.lon, label: dest.name } : { ...to, label: null };
+  state.activeTrip = null;
+  state.via = [];
+  renderTrips();
+  renderEndpoints();
+  calculate();
+}
+
 async function init() {
-  setLang(getLang());
+  const qLang = new URLSearchParams(location.search).get('lang');
+  setLang(qLang === 'en' || qLang === 'fr' ? qLang : getLang());
   bindUi();
   refreshLanguage();
   $('status').textContent = t('loading');
@@ -683,6 +825,7 @@ async function init() {
     refreshLanguage();
     $('status').textContent = '';
     if (VERIFY_PHOTOS) showPhotoVerification();
+    openFromUrl();
   } catch (err) {
     console.error(err);
     $('status').textContent = t('loadError');

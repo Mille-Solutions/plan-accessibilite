@@ -86,6 +86,19 @@ Le script interroge l'API Overpass sur la zone Monaco + Beausoleil et régénèr
 `--from-cache` reconstruit ces fichiers à partir de la dernière réponse brute (`data/raw/`, non versionné).
 Après une correction dans OpenStreetMap, relancer le script pour en profiter.
 
+## Imprimer un itinéraire / export PDF
+
+Sous le résultat d'un itinéraire, le bouton **Imprimer / PDF** produit une fiche A4 d'une page : trajet,
+distance, durée, heure de départ, carte du trajet avec les étapes numérotées, feuille de route (avec horaires
+et photos des ascenseurs), points d'attention, et un QR code qui rouvre le trajet en ligne. Pour obtenir un
+PDF, choisir « Enregistrer au format PDF » comme imprimante (sur iPhone : Partager → Imprimer, puis
+Partager → Enregistrer dans Fichiers). Le menu Imprimer du navigateur (Cmd/Ctrl + P) donne la même fiche.
+
+Liens directs (utilisés par le QR code) : `?trajet=<id>` ouvre un trajet de référence
+(ex. `?trajet=belgique-gare`), `?de=lat,lon&a=lat,lon` un trajet libre, `&lang=en` force l'anglais.
+Le QR code pointe vers l'adresse où la carte est ouverte : imprimer depuis la version en ligne (HTTPS),
+pas depuis `localhost`, pour qu'il soit utile.
+
 ## Photos des ascenseurs et des entrées
 
 Les photos aident à repérer un ascenseur depuis la rue. Elles s'affichent dans la fiche de l'ascenseur

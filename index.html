@@ -13,7 +13,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="css/style.css?v=202611160902">
+  <link rel="stylesheet" href="css/style.css?v=202611160917">
 </head>
 <body>
   <a class="skip-link" href="#panel" data-i18n="tabRoute">Itinéraire</a>
@@ -29,6 +29,9 @@
     </div>
     <button id="lang-btn" class="btn btn-ghost" type="button" data-i18n="langSwitch">English</button>
   </header>
+
+  <!-- Fiche d'impression (visible seulement à l'impression / export PDF) -->
+  <section id="print-head" class="print-only" aria-hidden="true"></section>
 
   <main class="layout">
     <aside id="panel" class="panel" aria-labelledby="panel-title">
@@ -123,10 +126,14 @@
     </dialog>
   </main>
 
+  <section id="print-sheet" class="print-only" aria-hidden="true"></section>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
           integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
-  <script type="module" src="js/app.js?v=202611160902"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"
+          integrity="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k" crossorigin="anonymous"></script>
+  <script type="module" src="js/app.js?v=202611160917"></script>
 </body>
 </html>
