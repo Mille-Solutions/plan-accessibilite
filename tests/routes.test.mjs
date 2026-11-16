@@ -80,3 +80,14 @@ test('l\'arrivée au Yacht Club se fait par le Quai Louis II (niveau du port)', 
     assert.equal(network.ways[network.edges[5 * lastEdge + 4]].id, QUAI_LOUIS_II, `arrivée hors du quai depuis ${JSON.stringify(from)}`);
   }
 });
+
+test('rues superposées : avenue d\'Ostende au-dessus de l\'avenue J.-F. Kennedy', () => {
+  const choices = router.levelChoices(43.73705, 7.4232);
+  const names = choices.map((c) => c.name);
+  assert.ok(names.includes('Avenue John F. Kennedy') && names.includes("Avenue d'Ostende"), `choix proposés : ${names.join(', ')}`);
+  const ostende = choices.find((c) => c.name === "Avenue d'Ostende");
+  const res = router.route({ from: { lat: 43.73705, lon: 7.4232, snapWays: ostende.ways }, to: destinations.ycm, options: { date: MONDAY_10H } });
+  assert.ok(res.ok);
+  // un point sans ambiguïté ne déclenche pas de question
+  assert.deepEqual(router.levelChoices(43.74269, 7.42564), []);
+});

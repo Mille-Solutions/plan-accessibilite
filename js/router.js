@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611161156';
-import { isOpen } from './hours.js?v=202611161156';
+import { FLAGS, haversine } from './network-builder.js?v=202611161200';
+import { isOpen } from './hours.js?v=202611161200';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -204,6 +204,82 @@ export class Router {
     if (!out.length && radius < 600) return this.candidates(lat, lon, opt, radius * 2.5, max);
     const limit = out.length ? out[0].dist + SNAP_SLACK : 0;
     return out.filter((c) => c.dist <= limit).slice(0, max);
+  }
+
+  /** Nom de rue d'un nœud : sa voie si elle est nommée, sinon la voie nommée la plus proche (trottoir → sa rue). */
+  _streetName(i) {
+    const E = this.net.edges;
+    const isStreet = (w) => w.name && !['footway', 'steps', 'corridor', 'path', 'elevator', 'platform'].includes(w.highway);
+    for (let k = this.adjStart[i]; k < this.adjStart[i + 1]; k++) {
+      const w = this.net.ways[E[5 * this.adj[k] + 4]];
+      if (isStreet(w)) return w.name;
+    }
+    let best = null, bestD = 25;
+    const ci = Math.floor(this.lat(i) / this.cell), cj = Math.floor(this.lon(i) / this.cell);
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        for (const j of this.grid.get(`${ci + di}:${cj + dj}`) || []) {
+          const d = haversine(this.lat(i), this.lon(i), this.lat(j), this.lon(j));
+          if (d >= bestD) continue;
+          for (let k = this.adjStart[j]; k < this.adjStart[j + 1]; k++) {
+            const w = this.net.ways[E[5 * this.adj[k] + 4]];
+            if (isStreet(w)) { best = w.name; bestD = d; break; }
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Rues superposées autour d'un point (ex. avenue d'Ostende au-dessus de l'avenue J.-F. Kennedy) :
+   * des rues proches à vol d'oiseau mais qu'aucun chemin sans marches court ne relie.
+   * Renvoie [] si le point n'est pas ambigu, sinon [{ name, dist, ways: [id OSM…] }] du plus proche au plus loin.
+   */
+  levelChoices(lat, lon, options = {}, radius = 30) {
+    const opt = { ...DEFAULTS, ...options, respectHours: false };
+    const near = this.candidates(lat, lon, opt, radius, 60);
+    const all = [];
+    const r = Math.ceil(radius / 111000 / this.cell) + 1;
+    const ci = Math.floor(lat / this.cell), cj = Math.floor(lon / this.cell);
+    for (let di = -r; di <= r; di++) {
+      for (let dj = -r; dj <= r; dj++) {
+        for (const i of this.grid.get(`${ci + di}:${cj + dj}`) || []) {
+          const d = haversine(lat, lon, this.lat(i), this.lon(i));
+          if (d <= radius && this._usable(i, opt)) all.push({ node: i, dist: d });
+        }
+      }
+    }
+    if (!near.length) return [];
+    const groups = new Map();
+    for (const c of all.sort((a, b) => a.dist - b.dist)) {
+      const name = this._streetName(c.node);
+      if (!name) continue;
+      let g = groups.get(name);
+      if (!g) groups.set(name, (g = { name, dist: c.dist, node: c.node, nodes: [] }));
+      g.nodes.push(c.node);
+    }
+    const list = [...groups.values()];
+    if (list.length < 2) return [];
+    // Deux rues sont « superposées » si le chemin sans marches entre elles est bien plus long que leur écart
+    const reach = (a, b) => {
+      const found = this._search([{ node: a.node, dist: 0 }], [{ node: b.node, dist: 0 }], opt);
+      return found ? found.cost : Infinity;
+    };
+    const distinct = [list[0]];
+    for (const g of list.slice(1)) {
+      const gap = haversine(this.lat(g.node), this.lon(g.node), this.lat(distinct[0].node), this.lon(distinct[0].node));
+      if (distinct.every((h) => reach(h, g) > Math.max(120, 5 * gap))) distinct.push(g);
+    }
+    if (distinct.length < 2) return [];
+    const E = this.net.edges;
+    return distinct.slice(0, 3).map((g) => {
+      const ways = new Set();
+      for (const i of g.nodes) {
+        for (let k = this.adjStart[i]; k < this.adjStart[i + 1]; k++) ways.add(this.net.ways[E[5 * this.adj[k] + 4]].id);
+      }
+      return { name: g.name, dist: Math.round(g.dist), ways: [...ways] };
+    });
   }
 
   _search(sources, targets, opt) {

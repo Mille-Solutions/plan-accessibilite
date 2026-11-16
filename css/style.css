@@ -400,3 +400,14 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
   .map .route-stop { transform: scale(.8); }
   .print-steps li { padding: .3mm 0; }
 }
+
+/* Choix de la rue quand plusieurs niveaux se superposent */
+.level-choice {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius);
+  background: var(--warn-bg); color: var(--warn-text);
+}
+.level-choice p { margin: 0 0 8px; font-size: .92rem; }
+.level-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.level-buttons .btn { text-transform: none; letter-spacing: 0; font: 600 14px var(--font-text); }
+.level-buttons .btn[aria-pressed="true"] { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+@media print { .level-choice { display: none; } }

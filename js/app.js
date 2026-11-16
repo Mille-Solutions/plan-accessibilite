@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611161156';
-import { isOpen } from './hours.js?v=202611161156';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161156';
+import { Router } from './router.js?v=202611161200';
+import { isOpen } from './hours.js?v=202611161200';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161200';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -202,6 +202,8 @@ function openViewer(g, k) {
 }
 
 document.addEventListener('click', (e) => {
+  const lvl = e.target.closest('[data-level-which]');
+  if (lvl) { chooseLevel(lvl.dataset.levelWhich, lvl.dataset.levelName); return; }
   const item = e.target.closest('.gallery-item');
   if (item) openViewer(Number(item.dataset.gallery), Number(item.dataset.index));
 });
@@ -332,7 +334,8 @@ function selectTrip(it) {
 // ---------------------------------------------------------------- Départ / arrivée
 function pointLabel(p) {
   if (!p) return t('notSet');
-  if (p.label) return loc(p.label);
+  if (p.label) return `${loc(p.label)}${p.street ? `, ${p.street}` : ''}`;
+  if (p.street) return `${t('mapPoint')}, ${p.street}`;
   return `${t('mapPoint')} (${p.lat.toFixed(5)}, ${p.lon.toFixed(5)})`;
 }
 
@@ -404,8 +407,47 @@ function fmtDist(m) {
   return m >= 1000 ? t('km', { n: (m / 1000).toLocaleString(getLang(), { maximumFractionDigits: 1 }) }) : t('meters', { n: Math.round(m) });
 }
 
+/**
+ * Point libre (GPS, clic, lien) au-dessus de rues superposées : propose le choix de la rue et, par défaut,
+ * retient la plus proche. Les trajets de référence et les destinations définies ne sont pas concernés.
+ */
+function resolveLevels(p) {
+  if (!p || p.elevator !== undefined || p.entrance !== undefined) return;
+  if (p.levelChoices === undefined) {
+    p.levelChoices = p.snapWays && !p.street ? [] : state.router.levelChoices(p.lat, p.lon, options());
+    if (p.levelChoices.length && !p.snapWays) {
+      const wanted = p.levelChoices.find((c) => c.name === p.street) || p.levelChoices[0];
+      p.street = wanted.name;
+      p.snapWays = wanted.ways;
+    }
+  }
+}
+
+function chooseLevel(which, name) {
+  const p = state[which];
+  const c = p?.levelChoices?.find((x) => x.name === name);
+  if (!c) return;
+  p.street = c.name;
+  p.snapWays = c.ways;
+  renderEndpoints();
+  calculate();
+}
+
+function levelChoiceHtml(which) {
+  const p = state[which];
+  if (!p?.levelChoices?.length) return '';
+  return `<div class="level-choice" role="group" aria-label="${esc(t(which === 'from' ? 'levelFrom' : 'levelTo'))}">
+    <p>${esc(t('levelIntro'))} <strong>${esc(t(which === 'from' ? 'levelFrom' : 'levelTo'))}</strong></p>
+    <div class="level-buttons">${p.levelChoices.map((c) => `<button type="button" class="btn btn-small" data-level-which="${which}" data-level-name="${esc(c.name)}" aria-pressed="${c.name === p.street}">${esc(c.name)}</button>`).join('')}</div>
+  </div>`;
+}
+
 function calculate() {
   if (!state.router || !state.from || !state.to) return;
+  resolveLevels(state.from);
+  resolveLevels(state.to);
+  $('from-value').textContent = pointLabel(state.from);
+  $('to-value').textContent = pointLabel(state.to);
   const res = state.router.route({ from: state.from, via: state.via, to: state.to, options: options() });
   state.lastResult = res;
   let walk = null;
@@ -475,9 +517,10 @@ function stepText(s) {
 
 function renderResult(res, walk) {
   const box = $('result');
+  const levels = levelChoiceHtml('from') + levelChoiceHtml('to');
   if (!res.ok) {
     const msg = res.reason === 'no-network' ? t('noNetwork') : res.reason === 'unknown-point' ? t('unknownPoint') : t('noPath');
-    box.innerHTML = `<p class="error">${esc(msg)}</p>${res.reason === 'no-path' && $('opt-hours').checked ? `<p class="hint">${esc(t('noPathHours'))}</p>` : ''}`;
+    box.innerHTML = `${levels}<p class="error">${esc(msg)}</p>${res.reason === 'no-path' && $('opt-hours').checked ? `<p class="hint">${esc(t('noPathHours'))}</p>` : ''}`;
     return;
   }
   const minutes = Math.max(1, Math.round(res.distance / WHEELCHAIR_SPEED + res.elevators.length * ELEVATOR_TIME));
@@ -497,7 +540,7 @@ function renderResult(res, walk) {
     const pics = s.osm ? galleryHtml(photosFor(s.osm), s.name, 'gallery gallery-small') : '';
     return `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${num}${esc(stepText(s))}${pics}</li>`;
   }).join('');
-  box.innerHTML = `
+  box.innerHTML = `${levels}
     <div class="summary">
       <div><span class="k">${esc(t('distance'))}</span><span class="v">${esc(fmtDist(res.distance))}</span></div>
       <div><span class="k">${esc(t('duration'))}</span><span class="v">${esc(t('minutes', { n: minutes }))}</span></div>
@@ -524,6 +567,8 @@ function tripUrl() {
   else {
     url.searchParams.set('de', `${r5(state.from.lat)},${r5(state.from.lon)}`);
     url.searchParams.set('a', `${r5(state.to.lat)},${r5(state.to.lon)}`);
+    if (state.from.street) url.searchParams.set('rd', state.from.street);
+    if (state.to.street) url.searchParams.set('ra', state.to.street);
   }
   if (getLang() !== 'fr') url.searchParams.set('lang', getLang());
   return url.toString();
@@ -796,8 +841,8 @@ function openFromUrl() {
   const to = parse(q.get('a')) || destinationPoint('ycm');
   const dest = Object.values(state.itineraries.destinations)
     .find((d) => Math.abs(d.lat - to.lat) < 1e-4 && Math.abs(d.lon - to.lon) < 1e-4);
-  state.from = { ...from, label: null };
-  state.to = dest ? { lat: dest.lat, lon: dest.lon, label: dest.name, snapWays: dest.snapWays } : { ...to, label: null };
+  state.from = { ...from, label: null, street: q.get('rd') || undefined };
+  state.to = dest ? { lat: dest.lat, lon: dest.lon, label: dest.name, snapWays: dest.snapWays } : { ...to, label: null, street: q.get('ra') || undefined };
   state.activeTrip = null;
   state.via = [];
   renderTrips();
