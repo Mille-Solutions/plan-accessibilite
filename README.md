@@ -5,6 +5,11 @@ de Monaco et Beausoleil, et calcule des itinéraires **sans escaliers** vers le 
 
 Première version, construite à partir du plan « Carte d'accessibilité PMR – Monaco ».
 
+## Guides
+
+- [Mise en ligne HTTPS](docs/mise-en-ligne-https.md) : modes d'intégration au site du Yacht Club, géolocalisation, réglages iPhone.
+- [Photos des ascenseurs](docs/photos-ascenseurs.md) : prise de vue, import, vérification et validation des photos.
+
 ## Lancer l'application
 
 Les données sont chargées en `fetch`, il faut donc un petit serveur web (pas de `file://`) :
