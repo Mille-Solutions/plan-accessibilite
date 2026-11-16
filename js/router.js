@@ -1,15 +1,15 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611161326';
-import { isOpen } from './hours.js?v=202611161326';
+import { FLAGS, haversine } from './network-builder.js?v=202611161347';
+import { isOpen } from './hours.js?v=202611161347';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
   avoidSteep: true,     // exclut les pentes > 12 % et pénalise 6–12 %
   respectHours: true,   // exclut les ascenseurs fermés à l'heure demandée
   date: null,           // Date du trajet (défaut : maintenant)
-  elevatorPenalty: 20,  // coût fixe d'un ascenseur, en mètres équivalents (attente)
+  elevatorPenalty: 80,  // coût fixe d'un ascenseur en mètres équivalents (≈ 1 min 30 d'attente) : évite les montées-descentes inutiles
 };
 
 const SNAP_RADIUS = 120; // m

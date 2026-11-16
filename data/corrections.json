@@ -12,6 +12,18 @@
       "name": "Passage entre l'ascenseur « Yacht Club » et le quai",
       "reason": "Accès au club par le niveau du quai réservé au personnel.",
       "date": "2026-11-16"
+    },
+    {
+      "osm": "way/879995943",
+      "name": "Allée privée entre l'avenue d'Ostende et le boulevard Louis II",
+      "reason": "Allée de service privée (service=driveway), pas un cheminement piéton public : depuis l'avenue d'Ostende, le public prend l'ascenseur du parking de la Costa.",
+      "date": "2026-11-16"
+    },
+    {
+      "osm": "way/879995944",
+      "name": "Passage sous immeuble de cette allée",
+      "reason": "Allée de service privée (service=driveway), pas un cheminement piéton public : depuis l'avenue d'Ostende, le public prend l'ascenseur du parking de la Costa.",
+      "date": "2026-11-16"
     }
   ],
   "addLinks": [
@@ -27,6 +39,20 @@
         "_osm": "ascenseur « CCAM - MH » node/4472516569"
       },
       "reason": "Depuis le côté Casino, le public prend l'ascenseur « Louis II / CCAM », suit la galerie jusqu'à l'ascenseur « CCAM - MH », puis monte au Yacht Club. Dans OSM, la galerie s'arrête à 15 m de cet ascenseur sans le rejoindre.",
+      "date": "2026-11-16"
+    },
+    {
+      "name": "Accès à l'ascenseur du parking de la Costa",
+      "from": {
+        "lat": 43.737328,
+        "lon": 7.42367,
+        "_osm": "trottoir de l'avenue d'Ostende, way/586268004"
+      },
+      "to": {
+        "elevator": 1872310865,
+        "_osm": "ascenseur « La Costa - Centre » node/1872310865"
+      },
+      "reason": "L'ascenseur du parking de la Costa se prend depuis l'avenue d'Ostende ; OSM ne le relie qu'à l'avenue de la Costa (haut) et à l'avenue J.-F. Kennedy (bas).",
       "date": "2026-11-16"
     }
   ]

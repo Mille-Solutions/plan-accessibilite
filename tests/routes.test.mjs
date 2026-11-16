@@ -106,3 +106,12 @@ test('côté Casino : ascenseur « Louis II / CCAM », galerie puis ascenseur «
   assert.deepEqual(names.slice(-2), ['Louis II / CCAM', 'CCAM - MH']);
   assert.ok(casino.steps.some((s) => s.name === 'Galerie du CCAM'));
 });
+
+test('avenue d\'Ostende : ascenseur du parking de la Costa, puis CCAM - MH', () => {
+  const A = { lat: 43.73735, lon: 7.4244 };
+  const ostende = router.levelChoices(A.lat, A.lon).find((c) => c.name === "Avenue d'Ostende");
+  assert.ok(ostende, 'avenue d\'Ostende non proposée au départ');
+  const res = router.route({ from: { ...A, snapWays: ostende.ways }, to: destinations.ycm, options: { date: MONDAY_10H } });
+  assert.ok(res.ok);
+  assert.deepEqual(res.elevators.map((e) => e.name), ['La Costa - Centre', 'CCAM - MH']);
+});
