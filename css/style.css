@@ -425,3 +425,14 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
   background: var(--selected-bg); color: var(--heading); border: 1.5px solid var(--border);
 }
 .route-steps > li.elev::before, .route-steps > li.entr::before { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+
+/* Étapes cliquables : mise en évidence sur la carte */
+.route-steps > li[data-step] { cursor: pointer; border-radius: 6px; transition: background-color .15s; }
+.route-steps > li[data-step]:hover { background: var(--selected-bg); }
+.route-steps > li.active { background: #fff3c4; box-shadow: inset 4px 0 0 #ffbf00; color: #13171c; }
+.route-steps > li.active.elev { color: #0b4f8a; }
+.step-hint { margin: 0 0 4px; font-size: .85rem; }
+.step-pulse { animation: step-pulse 1.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes step-pulse { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .step-pulse { animation: none; } }
+@media print { .step-hint { display: none; } }

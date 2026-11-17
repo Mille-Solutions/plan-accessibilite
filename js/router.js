@@ -1,8 +1,8 @@
 // Calcul d'itinéraire PMR côté client (Dijkstra) sur le graphe produit par network-builder.js.
 // Module ES sans dépendance, utilisé par l'application et par les tests Node.
 
-import { FLAGS, haversine } from './network-builder.js?v=202611171846';
-import { isOpen } from './hours.js?v=202611171846';
+import { FLAGS, haversine } from './network-builder.js?v=202611171851';
+import { isOpen } from './hours.js?v=202611171851';
 
 const DEFAULTS = {
   wheelchair: true,     // exclut escaliers, escalators, wheelchair=no, obstacles
@@ -446,12 +446,20 @@ export class Router {
       if (f & (FLAGS.STEPS | FLAGS.ESCALATOR)) result.warnings.add('steps');
       const name = way.name || null;
       const last = result.steps[result.steps.length - 1];
-      if (last && last.type === 'walk' && last.name === name) last.distance += len;
-      else result.steps.push({ type: 'walk', name, highway: way.highway, distance: len });
+      const j = found.path[idx + 1];
+      const seg = [[this.lat(i), this.lon(i)], [this.lat(j), this.lon(j)]];
+      if (last && last.type === 'walk' && last.name === name) {
+        last.distance += len;
+        last.coords.push(seg[1]);
+      } else result.steps.push({ type: 'walk', name, highway: way.highway, distance: len, coords: seg });
     });
     // fusion des petits tronçons sans nom dans le précédent pour une feuille de route lisible
     result.steps = result.steps.filter((s, k, arr) => {
-      if (s.type === 'walk' && !s.name && s.distance < 25 && k > 0 && arr[k - 1].type === 'walk') { arr[k - 1].distance += s.distance; return false; }
+      if (s.type === 'walk' && !s.name && s.distance < 25 && k > 0 && arr[k - 1].type === 'walk') {
+        arr[k - 1].distance += s.distance;
+        arr[k - 1].coords.push(...s.coords.slice(1));
+        return false;
+      }
       return true;
     });
     return dist;

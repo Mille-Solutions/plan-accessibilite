@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611171846';
-import { isOpen } from './hours.js?v=202611171846';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611171846';
+import { Router } from './router.js?v=202611171851';
+import { isOpen } from './hours.js?v=202611171851';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611171851';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -31,6 +31,7 @@ const state = {
   activeTrip: null, // id du trajet de référence sélectionné
   picking: null,    // 'from' | 'to' | null
   lastResult: null,
+  activeStep: null,    // index de l'étape mise en évidence sur la carte
   photos: new Map(),   // "node/123" → [{ src, thumb, caption, status }]
   galleries: [],       // listes de photos ouvertes dans la visionneuse (index = data-gallery)
 };
@@ -75,6 +76,7 @@ map.on('zoomend moveend', () => {
 });
 
 const routeLayer = L.layerGroup().addTo(map);
+const stepLayer = L.layerGroup().addTo(map); // étape de la feuille de route mise en évidence
 const markerLayer = L.layerGroup().addTo(map);
 
 // Les marqueurs ponctuels (toutes catégories) sont regroupés quand ils se chevauchent.
@@ -492,6 +494,8 @@ function stopIcon(group) {
 
 function drawRoute(res, walk) {
   routeLayer.clearLayers();
+  stepLayer.clearLayers();
+  state.activeStep = null;
   document.getElementById('map').classList.toggle('has-route', !!res.ok);
   if (walk && walk.ok) {
     L.polyline(walk.coords, { color: '#6b7280', weight: 5, opacity: 0.8, dashArray: '2 10', lineCap: 'round', className: 'route-line' }).addTo(routeLayer);
@@ -508,6 +512,43 @@ function drawRoute(res, walk) {
   }
   map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 18 });
 }
+
+/** Met en évidence une étape de la feuille de route sur la carte (un second appui l'enlève). */
+function highlightStep(i) {
+  const res = state.lastResult;
+  if (!res?.ok || !res.steps[i]) return;
+  const off = state.activeStep === i;
+  stepLayer.clearLayers();
+  state.activeStep = off ? null : i;
+  document.querySelectorAll('.route-steps > li').forEach((li) => {
+    const on = Number(li.dataset.step) === state.activeStep;
+    li.classList.toggle('active', on);
+    li.setAttribute('aria-pressed', String(on));
+  });
+  if (off) return;
+  const s = res.steps[i];
+  if (s.coords?.length > 1) {
+    // au-dessus du trajet bleu : contour sombre puis trait ambre, bien visibles même en petit
+    L.polyline(s.coords, { color: '#13171c', weight: 15, opacity: 0.75, lineCap: 'round', lineJoin: 'round', className: 'route-line', interactive: false }).addTo(stepLayer);
+    L.polyline(s.coords, { color: '#ffbf00', weight: 10, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'route-line', interactive: false }).addTo(stepLayer);
+    L.circleMarker(s.coords[0], { radius: 7, color: '#13171c', weight: 2, fillColor: '#ffbf00', fillOpacity: 1, className: 'route-line', interactive: false }).addTo(stepLayer);
+    map.fitBounds(L.latLngBounds(s.coords), { padding: [50, 50], maxZoom: 19 });
+  } else if (s.lat !== undefined) {
+    L.circleMarker([s.lat, s.lon], { radius: 30, color: '#13171c', weight: 11, opacity: 0.75, fill: false, className: 'route-line', interactive: false }).addTo(stepLayer);
+    L.circleMarker([s.lat, s.lon], { radius: 30, color: '#ffbf00', weight: 6, fill: false, className: 'route-line step-pulse', interactive: false }).addTo(stepLayer);
+    map.setView([s.lat, s.lon], Math.max(map.getZoom(), 18));
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.gallery-item')) return;
+  const li = e.target.closest('.route-steps > li[data-step]');
+  if (li) highlightStep(Number(li.dataset.step));
+});
+document.addEventListener('keydown', (e) => {
+  const li = e.target.closest?.('.route-steps > li[data-step]');
+  if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); highlightStep(Number(li.dataset.step)); }
+});
 
 function stepText(s) {
   const quote = (n) => (getLang() === 'fr' ? ` «\u00a0${n}\u00a0»` : ` “${n}”`);
@@ -540,11 +581,12 @@ function renderResult(res, walk) {
     : `<p class="hint">${esc(t('noElevator'))}</p>`;
   const warns = [...res.warnings.map((w) => t(`warn_${w}`)), t('warnData')];
   const stops = routeStops(res);
-  const steps = res.steps.map((s) => {
+  const steps = res.steps.map((s, i) => {
     const k = stops.indexOf(s);
     const num = k >= 0 ? `<span class="route-stop-num inline" aria-hidden="true">${k + 1}</span> ` : '';
     const pics = s.osm ? galleryHtml(photosFor(s.osm), s.name, 'gallery gallery-small') : '';
-    return `<li class="${s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : ''}">${num}${esc(stepText(s))}${pics}</li>`;
+    const cls = s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : '';
+    return `<li class="${cls}" data-step="${i}" tabindex="0" role="button" aria-pressed="false" aria-label="${esc(stepText(s))} – ${esc(t('showStep'))}">${num}${esc(stepText(s))}${pics}</li>`;
   }).join('');
   box.innerHTML = `${levels}
     <div class="summary">
@@ -552,7 +594,7 @@ function renderResult(res, walk) {
       <div><span class="k">${esc(t('duration'))}</span><span class="v">${esc(t('minutes', { n: minutes }))}</span></div>
     </div>
     ${walk && walk.ok ? `<p class="walk-compare">${esc(t('walkCompare', { d: fmtDist(walk.distance) }))}</p>` : ''}
-    <h4>${esc(t('steps'))}</h4><ol class="step-list route-steps">${steps}</ol>
+    <h4>${esc(t('steps'))}</h4><p class="hint step-hint">${esc(t('stepHint'))}</p><ol class="step-list route-steps">${steps}</ol>
     <h4>${esc(t('warnings'))}</h4><ul class="warn-list">${warns.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
     <h4>${esc(t('elevatorsUsed'))}</h4>${elev}
     <div class="result-actions">
