@@ -279,10 +279,13 @@ body.picking .map { cursor: crosshair; }
 }
 .route-stop-num {
   position: absolute; right: -8px; top: -8px; width: 22px; height: 22px; border-radius: 50%;
-  background: #ffbf00; color: #13171c; font: 800 13px/22px system-ui, sans-serif; text-align: center;
-  border: 2px solid #13171c;
+  display: grid; place-items: center; /* chiffre centré dans le cercle, bordure comprise */
+  background: #ffbf00; color: #13171c; font: 800 13px/1 system-ui, sans-serif; text-align: center;
+  font-variant-numeric: tabular-nums; border: 2px solid #13171c;
 }
-.route-stop-num.inline { position: static; display: inline-block; vertical-align: middle; margin-right: 4px; }
+.route-stop-num.inline {
+  position: static; display: inline-grid; vertical-align: -0.3em; margin-right: 4px; flex: none;
+}
 
 /* Quand un itinéraire est affiché, les autres repères passent au second plan */
 .map.has-route .leaflet-marker-pane .poi-icon:not(.route-stop .poi-icon),
