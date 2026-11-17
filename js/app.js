@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611171902';
-import { isOpen } from './hours.js?v=202611171902';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611171902';
+import { Router } from './router.js?v=202611171905';
+import { isOpen } from './hours.js?v=202611171905';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611171905';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -585,7 +585,7 @@ function renderResult(res, walk) {
     const k = stops.indexOf(s);
     const num = k >= 0 ? `<span class="route-stop-num inline" aria-hidden="true">${k + 1}</span> ` : '';
     const pics = s.osm ? galleryHtml(photosFor(s.osm), s.name, 'gallery gallery-small') : '';
-    const cls = s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : '';
+    const cls = [s.type === 'elevator' ? 'elev' : s.type === 'entrance' ? 'entr' : '', k >= 0 ? 'has-stop' : ''].join(' ').trim();
     return `<li class="${cls}" data-step="${i}" tabindex="0" role="button" aria-pressed="false" aria-label="${esc(stepText(s))} – ${esc(t('showStep'))}">${num}${esc(stepText(s))}${pics}</li>`;
   }).join('');
   box.innerHTML = `${levels}

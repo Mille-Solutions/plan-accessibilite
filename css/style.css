@@ -439,3 +439,9 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
 @keyframes step-pulse { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .step-pulse { animation: none; } }
 @media print { .step-hint { display: none; } }
+
+/* Pastille jaune (n° de l'étape sur la carte) posée à côté de la pastille bleue, centrée à la même hauteur */
+.route-steps > li.has-stop { padding-left: 64px; }
+.route-steps > li .route-stop-num.inline {
+  position: absolute; left: 32px; top: 10px; margin: 0; /* centre à 21 px, comme la pastille bleue (8 + 26/2) */
+}
