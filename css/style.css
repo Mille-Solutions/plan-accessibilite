@@ -418,15 +418,17 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
 /* Feuille de route toujours visible, en liste numérotée lisible */
 .route-steps { margin: 4px 0 0; padding-left: 0; list-style: none; counter-reset: step; }
 .route-steps > li {
-  counter-increment: step; position: relative; padding: 9px 0 9px 36px;
+  counter-increment: step; display: flex; align-items: center; gap: 8px; padding: 9px 4px 9px 0;
   border-bottom: 1px solid var(--border); line-height: 1.35;
 }
 .route-steps > li:last-child { border-bottom: 0; }
+/* pastilles et texte centrés verticalement les uns par rapport aux autres (pas d'alignement sur la ligne de base) */
 .route-steps > li::before {
-  content: counter(step); position: absolute; left: 0; top: 8px; width: 26px; height: 26px; border-radius: 50%;
-  display: grid; place-items: center; font: 700 12px var(--font-title);
+  content: counter(step); flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 12px/1 var(--font-title);
   background: var(--selected-bg); color: var(--heading); border: 1.5px solid var(--border);
 }
+.route-steps .step-body { flex: 1; min-width: 0; }
 .route-steps > li.elev::before, .route-steps > li.entr::before { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
 /* Étapes cliquables : mise en évidence sur la carte */
@@ -440,8 +442,5 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
 @media (prefers-reduced-motion: reduce) { .step-pulse { animation: none; } }
 @media print { .step-hint { display: none; } }
 
-/* Pastille jaune (n° de l'étape sur la carte) posée à côté de la pastille bleue, centrée à la même hauteur */
-.route-steps > li.has-stop { padding-left: 64px; }
-.route-steps > li .route-stop-num.inline {
-  position: absolute; left: 32px; top: 10px; margin: 0; /* centre à 21 px, comme la pastille bleue (8 + 26/2) */
-}
+/* Pastille jaune (n° de l'étape sur la carte) : élément de la ligne flex, centré comme la pastille bleue */
+.route-steps > li .route-stop-num.inline { position: static; margin: 0; flex: none; }
