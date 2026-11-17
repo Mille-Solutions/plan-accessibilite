@@ -411,3 +411,17 @@ body.printing .map { flex: none; width: 186mm; height: 88mm; }
 .level-buttons .btn { text-transform: none; letter-spacing: 0; font: 600 14px var(--font-text); }
 .level-buttons .btn[aria-pressed="true"] { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 @media print { .level-choice { display: none; } }
+
+/* Feuille de route toujours visible, en liste numérotée lisible */
+.route-steps { margin: 4px 0 0; padding-left: 0; list-style: none; counter-reset: step; }
+.route-steps > li {
+  counter-increment: step; position: relative; padding: 9px 0 9px 36px;
+  border-bottom: 1px solid var(--border); line-height: 1.35;
+}
+.route-steps > li:last-child { border-bottom: 0; }
+.route-steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: 8px; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 12px var(--font-title);
+  background: var(--selected-bg); color: var(--heading); border: 1.5px solid var(--border);
+}
+.route-steps > li.elev::before, .route-steps > li.entr::before { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }

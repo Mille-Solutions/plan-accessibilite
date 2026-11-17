@@ -1,8 +1,8 @@
 // Application principale : carte Leaflet, couches PMR, itinéraires.
 /* global L */
-import { Router } from './router.js?v=202611161347';
-import { isOpen } from './hours.js?v=202611161347';
-import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611161347';
+import { Router } from './router.js?v=202611171846';
+import { isOpen } from './hours.js?v=202611171846';
+import { t, loc, getLang, setLang, applyStatic } from './i18n.js?v=202611171846';
 
 const CENTER = [43.7395, 7.4235];
 const WHEELCHAIR_SPEED = 55; // m/min (≈ 3,3 km/h, prudent en terrain urbain)
@@ -456,6 +456,12 @@ function calculate() {
   }
   drawRoute(res, walk);
   renderResult(res, walk);
+  // amène le résultat (distance, feuille de route) à l'écran dans le panneau
+  const box = $('result');
+  if (box.offsetParent) {
+    const body = box.closest('.panel-body');
+    body.scrollTo({ top: box.offsetTop - body.offsetTop - 8, behavior: 'smooth' });
+  }
 }
 
 /** Étapes remarquables du trajet (ascenseurs, entrées de gare), numérotées dans l'ordre. */
@@ -546,9 +552,9 @@ function renderResult(res, walk) {
       <div><span class="k">${esc(t('duration'))}</span><span class="v">${esc(t('minutes', { n: minutes }))}</span></div>
     </div>
     ${walk && walk.ok ? `<p class="walk-compare">${esc(t('walkCompare', { d: fmtDist(walk.distance) }))}</p>` : ''}
-    <h4>${esc(t('elevatorsUsed'))}</h4>${elev}
+    <h4>${esc(t('steps'))}</h4><ol class="step-list route-steps">${steps}</ol>
     <h4>${esc(t('warnings'))}</h4><ul class="warn-list">${warns.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
-    <details><summary><strong>${esc(t('steps'))}</strong></summary><ol class="step-list">${steps}</ol></details>
+    <h4>${esc(t('elevatorsUsed'))}</h4>${elev}
     <div class="result-actions">
       <button id="print-btn" class="btn btn-primary" type="button">${esc(t('printPdf'))}</button>
       ${state.activeTrip ? '' : `<button id="copy-json" class="btn btn-small" type="button">${esc(t('copyJson'))}</button>`}
